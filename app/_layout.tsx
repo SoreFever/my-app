@@ -1,24 +1,33 @@
-import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
-import { Stack } from 'expo-router';
-import { StatusBar } from 'expo-status-bar';
-import 'react-native-reanimated';
-
-import { useColorScheme } from '@/hooks/use-color-scheme';
-
-export const unstable_settings = {
-  anchor: '(tabs)',
-};
+import { useState, useEffect } from "react";
+import { Stack, useRouter, useSegments } from "expo-router";
+import { subscribeToAuthChanges } from "../auth";
+import { User } from "firebase/auth";
 
 export default function RootLayout() {
-  const colorScheme = useColorScheme();
+  const [user, setUser] = useState<User | null>(null);
+  const [initializing, setInitializing] = useState(true);
+  const router = useRouter();
+  const segments = useSegments();
 
-  return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <Stack>
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
-      </Stack>
-      <StatusBar style="auto" />
-    </ThemeProvider>
-  );
+  useEffect(() => {
+    const unsubscribe = subscribeToAuthChanges((currentUser) => {
+      setUser(currentUser);
+      if (initializing) setInitializing(false);
+    });
+    return unsubscribe;
+  }, []);
+
+  useEffect(() => {
+    if (initializing) return;
+    const inTabs = segments[0] === "(tabs)";
+    if (!user && inTabs) {
+      router.replace("/login");
+    } else if (user && !inTabs) {
+      router.replace("/(tabs)");
+    }
+  }, [user, initializing, segments]);
+
+  if (initializing) return null;
+
+  return <Stack screenOptions={{ headerShown: false }} />;
 }
