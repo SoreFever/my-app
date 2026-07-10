@@ -6,7 +6,7 @@ import {
   User,
 } from "firebase/auth";
 
-import { auth } from "./firebaseConfig"
+import { auth } from "./firebaseConfig";
 
 export function signUp(email: string, password: string) {
   return createUserWithEmailAndPassword(auth, email, password);
