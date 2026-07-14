@@ -3,18 +3,17 @@ import { View, TextInput, Button, Text } from "react-native";
 import { logIn, signUp } from "../auth";
 import { FirebaseError } from "firebase/app";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { router } from "expo-router";
 
-export default function LoginScreen() {
+export default function SignUpScreen() {
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [error, setError] = useState("");
 
-    const handleLogin = async () => {
+    const handleSignUp = async () => {
     try {
         setError("");
-        await logIn(email, password);
-        } catch (e) {
+        await signUp(email, password);
+        } catch (e: any) {
             const err = e as FirebaseError
             setError(err.message);
         }
@@ -39,8 +38,7 @@ export default function LoginScreen() {
                     style={{ borderWidth: 1, padding: 10 }}
                 />
                 {error ? <Text style={{ color: "red" }}>{error}</Text> : null}
-                <Button title="Log In" onPress={handleLogin} />
-                <Button title="Sign Up" onPress={() => router.push("/signup")} />
+                <Button title="Create Account" onPress={handleSignUp} />
             </View>
         </SafeAreaView>
     );
