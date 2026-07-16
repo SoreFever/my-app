@@ -1,41 +1,40 @@
-import { useState, useEffect } from "react";
-import { Stack, useRouter, useSegments } from "expo-router";
-import { subscribeToAuthChanges } from "../auth";
-import { User } from "firebase/auth";
+// app/_layout.tsx
+import { useState, useEffect } from 'react'
+import { Stack, useRouter, useSegments } from 'expo-router'
+import { supabase } from '../supabase'
 
 export default function RootLayout() {
-  const [user, setUser] = useState<User | null>(null);
-  const [initializing, setInitializing] = useState(true);
-  const router = useRouter();
-  const segments = useSegments();
+  const [userId, setUserId] = useState<string | null>(null)
+  const [initialized, setInitialized] = useState(false)
+  const router = useRouter()
+  const segments = useSegments()
 
   useEffect(() => {
-    const unsubscribe = subscribeToAuthChanges((currentUser) => {
-      setUser(currentUser);
-      if (initializing) setInitializing(false);
-    });
-    return unsubscribe;
-  }, []);
+    supabase.auth.getClaims().then(({ data }) => {
+      setUserId(data?.claims?.sub ?? null)
+      setInitialized(true)
+    })
+
+    const { data: authListener } = supabase.auth.onAuthStateChange(async (_event, _session) => {
+      const { data } = await supabase.auth.getClaims()
+      setUserId(data?.claims?.sub ?? null)
+    })
+
+    return () => authListener.subscription.unsubscribe()
+  }, [])
 
   useEffect(() => {
-    if (initializing) return;
-    const inTabs = segments[0] === "(tabs)";
-    const inAuths = segments[0] === "login" || segments[0] === "signup";
+    if (!initialized) return
+    const inAuthGroup = segments[0] === 'auth'
 
-    if (!user && !inAuths) {
-      router.replace("/login")
-    } else if (user && !inTabs) {
-      router.replace("/(tabs)")
+    if (!userId && !inAuthGroup) {
+      router.replace('/auth')
+    } else if (userId && inAuthGroup) {
+      router.replace('/account')
     }
-  }, [user, initializing, segments]);
+  }, [userId, initialized, segments])
 
-  if (initializing) return null;
+  if (!initialized) return null // or a splash/loading screen
 
-  return (
-  <Stack screenOptions={{ headerShown: true }}>
-    <Stack.Screen name="login" />
-    <Stack.Screen name="signup" />
-    <Stack.Screen name="(tabs)" />
-  </Stack>
-  );
+  return <Stack screenOptions={{ headerShown: false }} />
 }
