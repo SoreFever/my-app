@@ -1,7 +1,7 @@
 // app/_layout.tsx
 import { useState, useEffect } from 'react'
 import { Stack, useRouter, useSegments } from 'expo-router'
-import { supabase } from '../supabase'
+import { supabase } from '@/supabase'
 
 export default function RootLayout() {
   const [userId, setUserId] = useState<string | null>(null)
@@ -30,7 +30,7 @@ export default function RootLayout() {
     if (!userId && !inAuthGroup) {
       router.replace('/auth')
     } else if (userId && inAuthGroup) {
-      router.replace('/account')
+      router.replace('/(tabs)')
     }
   }, [userId, initialized, segments])
 

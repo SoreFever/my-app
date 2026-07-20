@@ -1,14 +1,7 @@
-import { View, Text, Button } from 'react-native';
-import { logOut } from "../../auth"
+import { View } from 'react-native';
 
-export default function HomeScreen() {
-  const handleLogin = async () => {
-    logOut();
-  }
+export default function TabOne() {
   return (
-    <View style={{flex: 1, backgroundColor: 'white'}}>
-      <Button title="Log Out" onPress={handleLogin}></Button>
-    </View>
+    <View style={{flex: 1, backgroundColor: 'white'}}></View>
   );
 }
-
