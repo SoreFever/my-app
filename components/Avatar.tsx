@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { supabase } from '@/supabase'
+import { supabase } from '@/lib/supabase'
 import { View, Alert, Image, Text, TouchableOpacity } from 'react-native'
 import * as ImagePicker from 'expo-image-picker'
 import { appStyles } from '@/constants/styles'

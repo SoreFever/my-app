@@ -1,7 +1,7 @@
 // app/_layout.tsx
 import { useState, useEffect } from 'react'
 import { Stack, useRouter, useSegments } from 'expo-router'
-import { supabase } from '@/supabase'
+import { supabase } from '@/lib/supabase'
 
 export default function RootLayout() {
   const [userId, setUserId] = useState<string | null>(null)

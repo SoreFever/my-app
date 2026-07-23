@@ -1,12 +1,12 @@
 import { useState, useEffect } from 'react'
-import { supabase } from '@/supabase'
+import { supabase } from '@/lib/supabase'
 import { View, Alert, TextInput, Text, TouchableOpacity } from 'react-native'
-import Avatar from '@/app/avatar'
+import Avatar from '@/components/Avatar'
 import { appStyles } from '@/constants/styles'
 import { ScrollView } from 'react-native'
 
 
-export default function Account() {
+export default function Profile() {
   const [userId, setUserId] = useState<string | null>(null)
   const [email, setEmail] = useState<string | undefined>(undefined)
   const [loading, setLoading] = useState(true)

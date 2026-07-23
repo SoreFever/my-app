@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { Alert, Text, TextInput, TouchableOpacity, View } from 'react-native'
-import { supabase } from '@/supabase'
+import { supabase } from '@/lib/supabase'
 import { appStyles } from '@/constants/styles'
 
 export default function Auth() {
