@@ -32,8 +32,8 @@ export const appStyles = StyleSheet.create({
     color: '#9e9e9e',
   },
   button: {
-    backgroundColor: '#2089dc',
-    borderRadius: 4,
+    backgroundColor: 'lightblue',
+    borderRadius: 20,
     padding: 12,
     alignItems: 'center',
   },
@@ -51,7 +51,7 @@ export const appStyles = StyleSheet.create({
     marginTop: 20,
   },
   avatar: {
-    borderRadius: 5,
+    borderRadius: 999,
     overflow: 'hidden',
     maxWidth: '100%',
     marginBottom: 20,

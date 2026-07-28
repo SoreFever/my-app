@@ -83,10 +83,10 @@ export default function Profile() {
     }
   }
   return (
-    <ScrollView style={styles.container}>
+    <View style={styles.container}>
       <View>
         <Avatar
-          size={200}
+          size={150}
           url={avatarUrl}
           onUpload={(url: string) => {
             setAvatarUrl(url)
@@ -133,6 +133,6 @@ export default function Profile() {
           <Text style={styles.buttonText}>Sign Out</Text>
         </TouchableOpacity>
       </View>
-    </ScrollView>
+    </View>
   )
 }

@@ -14,7 +14,7 @@ interface Props {
 export default function Avatar({ url, size = 150, onUpload }: Props) {
   const [uploading, setUploading] = useState(false)
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
-  const avatarSize = { height: size, width: size }
+  const avatarSize = { height: size, width: size, borderRadius: size / 2 }
   const styles = appStyles
 
   useEffect(() => {
