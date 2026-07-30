@@ -27,9 +27,6 @@ export default function Profile() {
     if (userId) getProfile()
   }, [userId])
 
-  useEffect(() => {
-    if (userId) getProfile()
-  }, [userId])
   async function getProfile() {
     try {
       setLoading(true)
@@ -88,9 +85,10 @@ export default function Profile() {
         <Avatar
           size={150}
           url={avatarUrl}
-          onUpload={(url: string) => {
-            setAvatarUrl(url)
-            updateProfile({ username, website, avatar_url: url })
+          onUpload={(path: string) => {
+            const { data } = supabase.storage.from('avatars').getPublicUrl(path)
+            setAvatarUrl(data.publicUrl)
+            updateProfile({ username, website, avatar_url: data.publicUrl })
           }}
         />
       </View>
