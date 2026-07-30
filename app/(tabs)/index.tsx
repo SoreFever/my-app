@@ -9,6 +9,8 @@ import { ActivityIndicator, View } from "react-native";
 export default function Home() {
   const [userId, setUserId] = useState<string | null>(null)
 
+  
+
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUserId(session?.user?.id ?? null)
@@ -26,9 +28,8 @@ export default function Home() {
   }
   return (
     <FlashList
-      data={mockRuns}
+      data={runs}
       renderItem={({ item }) => <RunCard run={item} />}
-      // estimatedItemSize={220}
       contentContainerStyle={{ padding: 12 }}
     />
   );

@@ -6,4 +6,8 @@ export type Run = {
   duration_seconds: number
   title?: string
   photo_url?: string
+  profiles?: {
+    username: string | null
+    avatar_url: string | null
+  } | null
 }

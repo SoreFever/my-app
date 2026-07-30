@@ -60,7 +60,14 @@ export function RunCard({ run }: { run: Run }) {
 
   return (
   <View style={[styles.card, { backgroundColor: colors.cardBg, shadowColor: colors.shadow }]}>
-      <Text style={[styles.title, {color: colors.title}]}>{run.title}</Text>
+      <View style={styles.header}>
+        <Image
+          source={{ uri: run.profiles?.avatar_url ?? undefined }}
+          style={styles.avatar}
+        />
+        <Text style={[styles.title, {color: colors.title}]}>{run.title}</Text>
+      </View>
+      
 
       <Image source={{ uri: run.photo_url }} style={styles.photo} />
 
@@ -83,12 +90,30 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 2,
   },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 12,
+    paddingBottom: 4,
+    gap: 8,
+  },
+  avatar: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: '#ccc', // fallback bg while loading / if null
+  },
   title: {
     fontSize: 16,
     fontWeight: '600',
-    padding: 12,
-    paddingBottom: 4,
+    // padding removed — now handled by header
   },
+  // title: {
+  //   fontSize: 16,
+  //   fontWeight: '600',
+  //   padding: 12,
+  //   paddingBottom: 4,
+  // },
   photo: {
     width: '100%',
     height: 160,
