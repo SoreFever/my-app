@@ -105,15 +105,8 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 16,
-    fontWeight: '600',
-    // padding removed — now handled by header
+    fontWeight: '600'
   },
-  // title: {
-  //   fontSize: 16,
-  //   fontWeight: '600',
-  //   padding: 12,
-  //   paddingBottom: 4,
-  // },
   photo: {
     width: '100%',
     height: 160,

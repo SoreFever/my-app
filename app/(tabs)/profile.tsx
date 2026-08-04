@@ -3,7 +3,6 @@ import { supabase } from '@/lib/supabase'
 import { View, Alert, TextInput, Text, TouchableOpacity } from 'react-native'
 import Avatar from '@/components/Avatar'
 import { appStyles } from '@/constants/styles'
-import { ScrollView } from 'react-native'
 
 
 export default function Profile() {

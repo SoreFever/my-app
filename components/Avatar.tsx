@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState} from 'react'
 import { supabase } from '@/lib/supabase'
 import { View, Alert, Image, Text, TouchableOpacity } from 'react-native'
 import * as ImagePicker from 'expo-image-picker'
@@ -13,31 +13,9 @@ interface Props {
 
 export default function Avatar({ url, size = 150, onUpload }: Props) {
   const [uploading, setUploading] = useState(false)
-  const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
   const avatarSize = { height: size, width: size, borderRadius: size / 2 }
   const styles = appStyles
 
-  useEffect(() => {
-    if (url) downloadImage(url)
-  }, [url])
-
-  async function downloadImage(path: string) {
-    try {
-      const { data, error } = await supabase.storage.from('avatars').download(path)
-
-      if (error) {
-        throw error
-      }
-
-      const fr = new FileReader()
-      fr.readAsDataURL(data)
-      fr.onload = () => {
-        setAvatarUrl(fr.result as string)
-      }
-    } catch (error: any) {
-      console.log('Error downloading image: ', error.message)
-    }
-  }
 
   async function uploadAvatar() {
     try {
@@ -91,9 +69,9 @@ export default function Avatar({ url, size = 150, onUpload }: Props) {
 
   return (
     <View style={styles.avatarContainer}>
-      {avatarUrl ? (
+      {url ? (
         <Image
-          source={{ uri: avatarUrl }}
+          source={{ uri: url }}
           accessibilityLabel="Avatar"
           style={[avatarSize, styles.avatar, styles.image]}
         />
