@@ -36,5 +36,9 @@ export default function RootLayout() {
 
   if (!initialized) return null // or a splash/loading screen
 
-  return <Stack screenOptions={{ headerShown: false }} />
+  return (<Stack>
+    <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+    <Stack.Screen name="auth" options={{ headerShown: false }} />
+    <Stack.Screen name="settings" options={{ title: 'Settings' }} />
+  </Stack>)
 }

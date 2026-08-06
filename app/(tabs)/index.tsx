@@ -1,5 +1,4 @@
 import { FlashList } from "@shopify/flash-list"
-import { mockRuns } from "@/data/mockRuns";
 import { RunCard } from "@/components/RunCard";
 import { useRuns } from "@/hooks/useRuns";
 import { useEffect, useState } from "react";

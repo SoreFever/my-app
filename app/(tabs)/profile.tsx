@@ -1,134 +1,105 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { supabase } from '@/lib/supabase'
-import { View, Alert, TextInput, Text, TouchableOpacity } from 'react-native'
-import Avatar from '@/components/Avatar'
+import { View, Image, Text, TouchableOpacity, ActivityIndicator } from 'react-native'
+import { useRouter } from 'expo-router'
+import { Ionicons } from '@expo/vector-icons'
 import { appStyles } from '@/constants/styles'
-
+import { useRuns } from '@/hooks/useRuns'
 
 export default function Profile() {
-  const [userId, setUserId] = useState<string | null>(null)
-  const [email, setEmail] = useState<string | undefined>(undefined)
-  const [loading, setLoading] = useState(true)
-  const [username, setUsername] = useState('')
-  const [website, setWebsite] = useState('')
-  const [avatarUrl, setAvatarUrl] = useState('')
+  const router = useRouter()
   const styles = appStyles
 
-  // NEW: fetch the session on mount
+  const [userId, setUserId] = useState<string | null>(null)
+  const [username, setUsername] = useState('')
+  const [avatarUrl, setAvatarUrl] = useState('')
+
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUserId(session?.user?.id ?? null)
-      setEmail(session?.user?.email)
     })
   }, [])
 
   useEffect(() => {
-    if (userId) getProfile()
+    if (!userId) return
+    supabase
+      .from('profiles')
+      .select('username, avatar_url')
+      .eq('id', userId)
+      .single()
+      .then(({ data }) => {
+        if (data) {
+          setUsername(data.username ?? '')
+          setAvatarUrl(data.avatar_url ?? '')
+        }
+      })
   }, [userId])
 
-  async function getProfile() {
-    try {
-      setLoading(true)
-      let { data, error, status } = await supabase
-        .from('profiles')
-        .select(`username, website, avatar_url`)
-        .eq('id', userId)
-        .single()
-      if (error && status !== 406) {
-        throw error
-      }
-      if (data) {
-        setUsername(data.username)
-        setWebsite(data.website)
-        setAvatarUrl(data.avatar_url)
-      }
-    } catch (error) {
-      if (error instanceof Error) {
-        Alert.alert(error.message)
-      }
-    } finally {
-      setLoading(false)
+  const { runs, loading } = useRuns(userId ?? '')
+
+  const stats = useMemo(() => {
+    const totalRuns = runs.length
+    const totalDistance = runs.reduce((sum, r) => sum + r.distance_km, 0)
+    const totalSeconds = runs.reduce((sum, r) => sum + r.duration_seconds, 0)
+    const avgPaceMinPerKm = totalDistance > 0 ? (totalSeconds / 60) / totalDistance : 0
+
+    const paceMin = Math.floor(avgPaceMinPerKm)
+    const paceSec = Math.round((avgPaceMinPerKm - paceMin) * 60)
+
+    return {
+      totalRuns,
+      totalDistance: totalDistance.toFixed(1),
+      totalHours: (totalSeconds / 3600).toFixed(1),
+      avgPace: totalDistance > 0 ? `${paceMin}:${paceSec.toString().padStart(2, '0')}` : '—',
     }
-  }
-  async function updateProfile({
-    username,
-    website,
-    avatar_url,
-  }: {
-    username: string
-    website: string
-    avatar_url: string
-  }) {
-    try {
-      setLoading(true)
-      const updates = {
-        id: userId,
-        username,
-        website,
-        avatar_url,
-        updated_at: new Date(),
-      }
-      let { error } = await supabase.from('profiles').upsert(updates)
-      if (error) {
-        throw error
-      }
-    } catch (error: any) {
-      Alert.alert(error.message)
-    } finally {
-      setLoading(false)
-    }
-  }
+  }, [runs])
+
   return (
     <View style={styles.container}>
-      <View>
-        <Avatar
-          size={150}
-          url={avatarUrl}
-          onUpload={(path: string) => {
-            const { data } = supabase.storage.from('avatars').getPublicUrl(path)
-            setAvatarUrl(data.publicUrl)
-            updateProfile({ username, website, avatar_url: data.publicUrl })
-          }}
-        />
-      </View>
-      <View style={[styles.verticallySpaced, styles.mt20]}>
-        <Text style={styles.label}>Email</Text>
-        <TextInput
-          value={email ?? ''}
-          editable={false}
-          selectTextOnFocus={false}
-          style={[styles.input, styles.inputDisabled]}
-        />
-      </View>
-      <View style={styles.verticallySpaced}>
-        <Text style={styles.label}>Username</Text>
-        <TextInput
-          value={username || ''}
-          onChangeText={(text) => setUsername(text)}
-          style={styles.input}
-        />
-      </View>
-      <View style={styles.verticallySpaced}>
-        <Text style={styles.label}>Website</Text>
-        <TextInput
-          value={website || ''}
-          onChangeText={(text) => setWebsite(text)}
-          style={styles.input}
-        />
-      </View>
-      <View style={[styles.verticallySpaced, styles.mt20]}>
-        <TouchableOpacity
-          style={[styles.button, loading && styles.buttonDisabled]}
-          onPress={() => updateProfile({ username, website, avatar_url: avatarUrl })}
-          disabled={loading}
-        >
-          <Text style={styles.buttonText}>{loading ? 'Loading ...' : 'Update'}</Text>
+      <View style={{ flexDirection: 'row', justifyContent: 'flex-end' }}>
+        <TouchableOpacity onPress={() => router.push('/settings')}>
+          <Ionicons name="settings-outline" size={24} />
         </TouchableOpacity>
       </View>
-      <View style={styles.verticallySpaced}>
-        <TouchableOpacity style={styles.button} onPress={() => supabase.auth.signOut()}>
-          <Text style={styles.buttonText}>Sign Out</Text>
-        </TouchableOpacity>
+
+      <View style={{ alignItems: 'center', marginTop: 8 }}>
+        {avatarUrl ? (
+          <Image
+            source={{ uri: avatarUrl }}
+            style={{ width: 100, height: 100, borderRadius: 50 }}
+          />
+        ) : (
+          <View style={{ width: 100, height: 100, borderRadius: 50, backgroundColor: '#ccc' }} />
+        )}
+        <Text style={{ fontSize: 20, fontWeight: '600', marginTop: 12 }}>
+          {username || 'Runner'}
+        </Text>
+      </View>
+
+      <View
+        style={{
+          flexDirection: 'row',
+          justifyContent: 'space-around',
+          marginTop: 24,
+          paddingVertical: 16,
+        }}
+      >
+        <View style={{ alignItems: 'center' }}>
+          <Text style={{ fontSize: 18, fontWeight: '600' }}>{stats.totalRuns}</Text>
+          <Text style={{ fontSize: 12, color: '#666' }}>Runs</Text>
+        </View>
+        <View style={{ alignItems: 'center' }}>
+          <Text style={{ fontSize: 18, fontWeight: '600' }}>{stats.totalDistance} km</Text>
+          <Text style={{ fontSize: 12, color: '#666' }}>Distance</Text>
+        </View>
+        <View style={{ alignItems: 'center' }}>
+          <Text style={{ fontSize: 18, fontWeight: '600' }}>{stats.totalHours} h</Text>
+          <Text style={{ fontSize: 12, color: '#666' }}>Time</Text>
+        </View>
+        <View style={{ alignItems: 'center' }}>
+          <Text style={{ fontSize: 18, fontWeight: '600' }}>{stats.avgPace}</Text>
+          <Text style={{ fontSize: 12, color: '#666' }}>Avg Pace</Text>
+        </View>
       </View>
     </View>
   )
