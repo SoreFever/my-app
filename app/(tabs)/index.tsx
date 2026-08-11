@@ -1,4 +1,4 @@
-import { FlashList } from "@shopify/flash-list"
+import { FlashList } from "@shopify/flash-list";
 import { RunCard } from "@/components/RunCard";
 import { useRuns } from "@/hooks/useRuns";
 import { useEffect, useState } from "react";
@@ -6,24 +6,22 @@ import { supabase } from "@/lib/supabase";
 import { ActivityIndicator, View } from "react-native";
 
 export default function Home() {
-  const [userId, setUserId] = useState<string | null>(null)
-
-  
+  const [userId, setUserId] = useState<string | null>(null);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
-      setUserId(session?.user?.id ?? null)
-    })
-  }, [])
+      setUserId(session?.user?.id ?? null);
+    });
+  }, []);
 
-  const { runs, loading } = useRuns(userId ?? '')
+  const { runs, loading } = useRuns(userId ?? "");
 
   if (loading) {
     return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+      <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
         <ActivityIndicator size="large" />
       </View>
-    )
+    );
   }
   return (
     <FlashList

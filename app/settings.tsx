@@ -1,53 +1,54 @@
-import { useState, useEffect } from 'react'
-import { supabase } from '@/lib/supabase'
-import { View, Alert, TextInput, Text, TouchableOpacity } from 'react-native'
-import Avatar from '@/components/Avatar'
-import { appStyles } from '@/constants/styles'
-
+import { useState, useEffect } from "react";
+import { supabase } from "@/lib/supabase";
+import { View, Alert, TextInput, Text, TouchableOpacity } from "react-native";
+import Avatar from "@/components/Avatar";
+import { appStyles } from "@/constants/styles";
+import { ThemedView } from "@/components/themed-view";
+import { ThemedText } from "@/components/themed-text";
 
 export default function Settings() {
-  const [userId, setUserId] = useState<string | null>(null)
-  const [email, setEmail] = useState<string | undefined>(undefined)
-  const [loading, setLoading] = useState(true)
-  const [username, setUsername] = useState('')
-  const [website, setWebsite] = useState('')
-  const [avatarUrl, setAvatarUrl] = useState('')
-  const styles = appStyles
+  const [userId, setUserId] = useState<string | null>(null);
+  const [email, setEmail] = useState<string | undefined>(undefined);
+  const [loading, setLoading] = useState(true);
+  const [username, setUsername] = useState("");
+  const [website, setWebsite] = useState("");
+  const [avatarUrl, setAvatarUrl] = useState("");
+  const styles = appStyles;
 
   // NEW: fetch the session on mount
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
-      setUserId(session?.user?.id ?? null)
-      setEmail(session?.user?.email)
-    })
-  }, [])
+      setUserId(session?.user?.id ?? null);
+      setEmail(session?.user?.email);
+    });
+  }, []);
 
   useEffect(() => {
-    if (userId) getProfile()
-  }, [userId])
+    if (userId) getProfile();
+  }, [userId]);
 
   async function getProfile() {
     try {
-      setLoading(true)
+      setLoading(true);
       let { data, error, status } = await supabase
-        .from('profiles')
+        .from("profiles")
         .select(`username, website, avatar_url`)
-        .eq('id', userId)
-        .single()
+        .eq("id", userId)
+        .single();
       if (error && status !== 406) {
-        throw error
+        throw error;
       }
       if (data) {
-        setUsername(data.username)
-        setWebsite(data.website)
-        setAvatarUrl(data.avatar_url)
+        setUsername(data.username);
+        setWebsite(data.website);
+        setAvatarUrl(data.avatar_url);
       }
     } catch (error) {
       if (error instanceof Error) {
-        Alert.alert(error.message)
+        Alert.alert(error.message);
       }
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
   }
   async function updateProfile({
@@ -55,81 +56,90 @@ export default function Settings() {
     website,
     avatar_url,
   }: {
-    username: string
-    website: string
-    avatar_url: string
+    username: string;
+    website: string;
+    avatar_url: string;
   }) {
     try {
-      setLoading(true)
+      setLoading(true);
       const updates = {
         id: userId,
         username,
         website,
         avatar_url,
         updated_at: new Date(),
-      }
-      let { error } = await supabase.from('profiles').upsert(updates)
+      };
+      let { error } = await supabase.from("profiles").upsert(updates);
       if (error) {
-        throw error
+        throw error;
       }
     } catch (error: any) {
-      Alert.alert(error.message)
+      Alert.alert(error.message);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
   }
   return (
-    <View style={styles.container}>
-      <View>
+    <ThemedView style={styles.container}>
+      <ThemedView>
         <Avatar
           size={150}
           url={avatarUrl}
           onUpload={(path: string) => {
-            const { data } = supabase.storage.from('avatars').getPublicUrl(path)
-            setAvatarUrl(data.publicUrl)
-            updateProfile({ username, website, avatar_url: data.publicUrl })
+            const { data } = supabase.storage
+              .from("avatars")
+              .getPublicUrl(path);
+            setAvatarUrl(data.publicUrl);
+            updateProfile({ username, website, avatar_url: data.publicUrl });
           }}
         />
-      </View>
-      <View style={[styles.verticallySpaced, styles.mt20]}>
-        <Text style={styles.label}>Email</Text>
+      </ThemedView>
+      <ThemedView style={[styles.verticallySpaced, styles.mt20]}>
+        <ThemedText style={styles.label}>Email</ThemedText>
         <TextInput
-          value={email ?? ''}
+          value={email ?? ""}
           editable={false}
           selectTextOnFocus={false}
           style={[styles.input, styles.inputDisabled]}
         />
-      </View>
-      <View style={styles.verticallySpaced}>
-        <Text style={styles.label}>Username</Text>
+      </ThemedView>
+      <ThemedView style={styles.verticallySpaced}>
+        <ThemedText style={styles.label}>Username</ThemedText>
         <TextInput
-          value={username || ''}
+          value={username || ""}
           onChangeText={(text) => setUsername(text)}
           style={styles.input}
         />
-      </View>
-      <View style={styles.verticallySpaced}>
-        <Text style={styles.label}>Website</Text>
+      </ThemedView>
+      <ThemedView style={styles.verticallySpaced}>
+        <ThemedText style={styles.label}>Website</ThemedText>
         <TextInput
-          value={website || ''}
+          value={website || ""}
           onChangeText={(text) => setWebsite(text)}
           style={styles.input}
         />
-      </View>
-      <View style={[styles.verticallySpaced, styles.mt20]}>
+      </ThemedView>
+      <ThemedView style={[styles.verticallySpaced, styles.mt20]}>
         <TouchableOpacity
           style={[styles.button, loading && styles.buttonDisabled]}
-          onPress={() => updateProfile({ username, website, avatar_url: avatarUrl })}
+          onPress={() =>
+            updateProfile({ username, website, avatar_url: avatarUrl })
+          }
           disabled={loading}
         >
-          <Text style={styles.buttonText}>{loading ? 'Loading ...' : 'Update'}</Text>
+          <ThemedText style={styles.buttonText}>
+            {loading ? "Loading ..." : "Update"}
+          </ThemedText>
         </TouchableOpacity>
-      </View>
-      <View style={styles.verticallySpaced}>
-        <TouchableOpacity style={styles.button} onPress={() => supabase.auth.signOut()}>
-          <Text style={styles.buttonText}>Sign Out</Text>
+      </ThemedView>
+      <ThemedView style={styles.verticallySpaced}>
+        <TouchableOpacity
+          style={styles.button}
+          onPress={() => supabase.auth.signOut()}
+        >
+          <ThemedText style={styles.buttonText}>Sign Out</ThemedText>
         </TouchableOpacity>
-      </View>
-    </View>
-  )
+      </ThemedView>
+    </ThemedView>
+  );
 }
