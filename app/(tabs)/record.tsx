@@ -4,6 +4,7 @@ import * as Location from "expo-location";
 import { ThemedView } from "@/components/themed-view";
 import { ThemedText } from "@/components/themed-text";
 import { useThemeColor } from "@/hooks/use-theme-color";
+import { supabase } from "@/lib/supabase";
 
 function haversineDistance(
   coord1: { latitude: number; longitude: number },
@@ -46,12 +47,16 @@ function formatRollingPace(paceMinPerKm: number) {
   return `${min}:${sec.toString().padStart(2, "0")}`;
 }
 
+type RunState = "idle" | "tracking" | "finished";
+
 export default function Record() {
-  const [tracking, setTracking] = useState(false);
+  const [runState, setRunState] = useState<RunState>("idle");
+  // const [tracking, setTracking] = useState(false);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [distanceKm, setDistanceKm] = useState(0);
   const recentSpeeds = useRef<number[]>([]); // Store recent speeds for smoothing
   const [currentPaceMinPerKm, setCurrentPaceMinPerKm] = useState(0); // Current pace in min/km
+  const [saving, setSaving] = useState(false);
 
   const mutedColor = useThemeColor({}, "muted");
   const tintColor = useThemeColor({}, "tint");
@@ -72,19 +77,14 @@ export default function Record() {
     };
   }, []);
 
-  async function startRun() {
+  async function startTracking() {
     const { status } = await Location.requestForegroundPermissionsAsync();
     if (status !== "granted") {
       alert("Location permission is required to record a run.");
       return;
     }
 
-    setElapsedSeconds(0);
-    setDistanceKm(0);
-    setCurrentPaceMinPerKm(0);
-    lastCoord.current = null;
-    recentSpeeds.current = [];
-    setTracking(true);
+    setRunState("tracking");
 
     timerRef.current = setInterval(() => {
       setElapsedSeconds((prev) => prev + 1);
@@ -93,8 +93,8 @@ export default function Record() {
     locationSubscription.current = await Location.watchPositionAsync(
       {
         accuracy: Location.Accuracy.BestForNavigation,
-        timeInterval: 2000,
-        distanceInterval: 5,
+        timeInterval: 1000,
+        distanceInterval: 2,
       },
       (location) => {
         const { latitude, longitude, speed } = location.coords;
@@ -110,18 +110,107 @@ export default function Record() {
         if (speed && speed > 0) {
           recentSpeeds.current.push(speed);
           if (recentSpeeds.current.length > 8) recentSpeeds.current.shift();
-          const avgSpeed = recentSpeeds.current.reduce((a, b) => a + b, 0) / recentSpeeds.current.length;
-          setCurrentPaceMinPerKm(avgSpeed > 0 ? (1000 / avgSpeed) / 60 : 0);
+          const avgSpeed =
+            recentSpeeds.current.reduce((a, b) => a + b, 0) /
+            recentSpeeds.current.length;
+          setCurrentPaceMinPerKm(avgSpeed > 0 ? 1000 / avgSpeed / 60 : 0);
         }
       },
     );
   }
 
-  function stopRun() {
-    setTracking(false);
+  // pause tracking without resetting stats — used when user hits "Stop"
+  function pauseTracking() {
     if (timerRef.current) clearInterval(timerRef.current);
     locationSubscription.current?.remove();
-    // TODO: save to Supabase `runs` table here once you're ready
+    setRunState("finished");
+  }
+
+  // resume tracking from where it left off
+  async function continueTracking() {
+    const { status } = await Location.requestForegroundPermissionsAsync();
+    if (status !== "granted") {
+      alert("Location permission is required to continue.");
+      return;
+    }
+
+    setRunState("tracking");
+
+    timerRef.current = setInterval(() => {
+      setElapsedSeconds((prev) => prev + 1);
+    }, 1000);
+
+    // don't reset lastCoord — next point will just calculate distance from where we paused
+    locationSubscription.current = await Location.watchPositionAsync(
+      {
+        accuracy: Location.Accuracy.BestForNavigation,
+        timeInterval: 1000,
+        distanceInterval: 2,
+      },
+      (location) => {
+        const { latitude, longitude, speed } = location.coords;
+        if (lastCoord.current) {
+          const delta = haversineDistance(lastCoord.current, {
+            latitude,
+            longitude,
+          });
+          setDistanceKm((prev) => prev + delta);
+        }
+        lastCoord.current = { latitude, longitude };
+
+        if (speed && speed > 0) {
+          recentSpeeds.current.push(speed);
+          if (recentSpeeds.current.length > 8) recentSpeeds.current.shift();
+          const avgSpeed =
+            recentSpeeds.current.reduce((a, b) => a + b, 0) /
+            recentSpeeds.current.length;
+          setCurrentPaceMinPerKm(avgSpeed > 0 ? 1000 / avgSpeed / 60 : 0);
+        }
+      },
+    );
+  }
+
+  function resetAll() {
+    setElapsedSeconds(0);
+    setDistanceKm(0);
+    setCurrentPaceMinPerKm(0);
+    lastCoord.current = null;
+    recentSpeeds.current = [];
+    setRunState("idle");
+  }
+
+  async function saveRun() {
+    setSaving(true);
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+    const userId = session?.user?.id;
+
+    if (!userId || distanceKm <= 0 || elapsedSeconds <= 0) {
+      alert("Can't save an empty or invalid run.");
+      setSaving(false);
+      return;
+    }
+
+    const { error } = await supabase.from("runs").insert({
+      user_id: userId,
+      distance_km: Math.round(distanceKm * 100) / 100, // round to 2 decimal places
+      duration_seconds: elapsedSeconds,
+    });
+
+    setSaving(false);
+
+    if (error) {
+      console.log("save run error:", error);
+      alert("Failed to save run.");
+      return;
+    }
+
+    resetAll();
+  }
+
+  function discardRun() {
+    resetAll();
   }
 
   return (
@@ -161,27 +250,89 @@ export default function Record() {
         </ThemedText>
       </ThemedView>
 
-      <TouchableOpacity
-        onPress={tracking ? stopRun : startRun}
-        style={{
-          backgroundColor: tracking ? "#e74c3c" : tintColor,
-          width: 80,
-          height: 80,
-          borderRadius: 40,
-          alignItems: "center",
-          justifyContent: "center",
-          alignSelf: "center",
-        }}
-      >
-        <ThemedView
+      {runState === "idle" && (
+        <TouchableOpacity
+          onPress={startTracking}
           style={{
-            width: tracking ? 28 : 60,
-            height: tracking ? 28 : 60,
-            borderRadius: tracking ? 6 : 30,
-            backgroundColor: "#e74c3c",
+            backgroundColor: tintColor,
+            width: 80,
+            height: 80,
+            borderRadius: 40,
+            alignItems: "center",
+            justifyContent: "center",
+            alignSelf: "center",
           }}
-          />
-      </TouchableOpacity>
+        >
+          <ThemedText
+            style={{
+              color: bgColor,
+              fontSize: 14,
+              fontWeight: "600",
+            }}
+          >
+            Start
+          </ThemedText>
+        </TouchableOpacity>
+      )}
+
+      {runState === "tracking" && (
+        <TouchableOpacity
+          onPress={pauseTracking}
+          style={{
+            backgroundColor: "e74c3c",
+            width: 80,
+            height: 80,
+            borderRadius: 40,
+            alignItems: "center",
+            justifyContent: "center",
+            alignSelf: "center",
+          }}
+        >
+          <ThemedText
+            style={{
+              color: "#fff",
+              fontSize: 14,
+              fontWeight: "600",
+            }}
+          >
+            Stop
+          </ThemedText>
+        </TouchableOpacity>
+      )}
+
+      {runState === "finished" && (
+        <ThemedView
+          style={{ flexDirection: "row", justifyContent: "space-around" }}
+        >
+          <TouchableOpacity
+            onPress={continueTracking}
+            style={{ alignItems: "center" }}
+          >
+            <ThemedText style={{ color: tintColor, fontWeight: "600" }}>
+              Continue
+            </ThemedText>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            onPress={discardRun}
+            style={{ alignItems: "center" }}
+          >
+            <ThemedText style={{ color: "#e74c3c", fontWeight: "600" }}>
+              Discard
+            </ThemedText>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            onPress={saveRun}
+            disabled={saving}
+            style={{ alignItems: "center" }}
+          >
+            <ThemedText style={{ color: tintColor, fontWeight: "600" }}>
+              {saving ? "Saving..." : "Save"}
+            </ThemedText>
+          </TouchableOpacity>
+        </ThemedView>
+      )}
     </ThemedView>
   );
 }

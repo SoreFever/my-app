@@ -33,6 +33,8 @@ function StatItem({ value, label }: { value: string; label: string }) {
 
 export function RunCard({ run }: { run: Run }) {
   const cardBg = useThemeColor({}, "card");
+  const DEFAULT_RUN_PHOTO =
+    "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=600&h=300&fit=crop";
 
   return (
     <ThemedView style={[styles.card, { backgroundColor: cardBg }]}>
@@ -44,14 +46,20 @@ export function RunCard({ run }: { run: Run }) {
         <ThemedText style={styles.title}>{run.title}</ThemedText>
       </ThemedView>
 
-      <Image source={{ uri: run.photo_url }} style={styles.photo} />
+      <Image
+        source={{ uri: run.photo_url ?? DEFAULT_RUN_PHOTO }}
+        style={styles.photo}
+      />
 
       <ThemedView style={styles.statsRow}>
         <StatItem
           value={`${formatPace(run.duration_seconds, run.distance_km)}`}
           label={"Pace"}
         />
-        <StatItem value={`${run.distance_km} km`} label={"Distance"} />
+        <StatItem
+          value={`${run.distance_km.toFixed(2)} km`}
+          label={"Distance"}
+        />
         <StatItem
           value={`${formatDuration(run.duration_seconds)}`}
           label={"Duration"}
