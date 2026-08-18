@@ -3,6 +3,13 @@ import { Text, Image, StyleSheet } from "react-native";
 import { ThemedView } from "./themed-view";
 import { ThemedText } from "./themed-text";
 import { useThemeColor } from "@/hooks/use-theme-color";
+import { Alert, TouchableOpacity } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
+
+interface RunCardProps {
+  run: Run;
+  onDelete: (runId: string) => void;
+}
 
 function formatDuration(seconds: number) {
   const mins = Math.floor(seconds / 60);
@@ -31,19 +38,46 @@ function StatItem({ value, label }: { value: string; label: string }) {
   );
 }
 
-export function RunCard({ run }: { run: Run }) {
+export function RunCard({ run, onDelete }: RunCardProps) {
   const cardBg = useThemeColor({}, "card");
+  const mutedColor = useThemeColor({}, "muted");
   const DEFAULT_RUN_PHOTO =
     "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=600&h=300&fit=crop";
 
+  function confirmDelete() {
+    Alert.alert("Delete run", "This can't be undone.", [
+      { text: "Cancel", style: "cancel" },
+      { text: "Delete", style: "destructive", onPress: () => onDelete(run.id) },
+    ]);
+  }
+
+  function showOptions() {
+    Alert.alert(
+      run.title ?? 'Run options',
+      undefined,
+      [
+        { text: 'Delete', style: 'destructive', onPress: confirmDelete },
+        { text: 'Cancel', style: 'cancel' },
+      ]
+    )
+  }
+
   return (
     <ThemedView style={[styles.card, { backgroundColor: cardBg }]}>
-      <ThemedView style={styles.header}>
-        <Image
-          source={{ uri: run.profiles?.avatar_url ?? undefined }}
-          style={styles.avatar}
-        />
-        <ThemedText style={styles.title}>{run.title}</ThemedText>
+      <ThemedView style={[styles.header, { justifyContent: "space-between" }]}>
+        <ThemedView
+          style={{ flexDirection: "row", alignItems: "center", gap: 8 }}
+        >
+          <Image
+            source={{ uri: run.profiles?.avatar_url ?? undefined }}
+            style={styles.avatar}
+          />
+          <ThemedText style={styles.title}>{run.title}</ThemedText>
+        </ThemedView>
+
+        <TouchableOpacity onPress={showOptions} style={{ padding: 12 }}>
+          <Ionicons name="ellipsis-horizontal" size={20} color={mutedColor} />
+        </TouchableOpacity>
       </ThemedView>
 
       <Image
