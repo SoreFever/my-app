@@ -5,6 +5,7 @@ import { ThemedText } from "./themed-text";
 import { useThemeColor } from "@/hooks/use-theme-color";
 import { Alert, TouchableOpacity } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
 
 interface RunCardProps {
   run: Run;
@@ -44,6 +45,8 @@ export function RunCard({ run, onDelete }: RunCardProps) {
   const DEFAULT_RUN_PHOTO =
     "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=600&h=300&fit=crop";
 
+  const router = useRouter();
+
   function confirmDelete() {
     Alert.alert("Delete run", "This can't be undone.", [
       { text: "Cancel", style: "cancel" },
@@ -52,14 +55,11 @@ export function RunCard({ run, onDelete }: RunCardProps) {
   }
 
   function showOptions() {
-    Alert.alert(
-      run.title ?? 'Run options',
-      undefined,
-      [
-        { text: 'Delete', style: 'destructive', onPress: confirmDelete },
-        { text: 'Cancel', style: 'cancel' },
-      ]
-    )
+    Alert.alert(run.title ?? "Run options", undefined, [
+      { text: "Edit", onPress: () => router.push(`/edit-run/${run.id}`) },
+      { text: "Delete", style: "destructive", onPress: confirmDelete },
+      { text: "Cancel", style: "cancel" },
+    ]);
   }
 
   return (

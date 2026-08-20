@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { TouchableOpacity } from "react-native";
 import * as Location from "expo-location";
+import { useRouter } from "expo-router";
 import { ThemedView } from "@/components/themed-view";
 import { ThemedText } from "@/components/themed-text";
 import { useThemeColor } from "@/hooks/use-theme-color";
@@ -10,7 +11,7 @@ function haversineDistance(
   coord1: { latitude: number; longitude: number },
   coord2: { latitude: number; longitude: number },
 ) {
-  const R = 6371; // km
+  const R = 6371;
   const dLat = ((coord2.latitude - coord1.latitude) * Math.PI) / 180;
   const dLon = ((coord2.longitude - coord1.longitude) * Math.PI) / 180;
   const a =
@@ -32,14 +33,6 @@ function formatTimer(seconds: number) {
   return `${m}:${s.toString().padStart(2, "0")}`;
 }
 
-function formatPace(elapsedSeconds: number, distanceKm: number) {
-  if (distanceKm === 0) return "--:--";
-  const paceMinPerKm = elapsedSeconds / 60 / distanceKm;
-  const min = Math.floor(paceMinPerKm);
-  const sec = Math.round((paceMinPerKm - min) * 60);
-  return `${min}:${sec.toString().padStart(2, "0")}`;
-}
-
 function formatRollingPace(paceMinPerKm: number) {
   if (!paceMinPerKm || paceMinPerKm <= 0) return "--:--";
   const min = Math.floor(paceMinPerKm);
@@ -50,17 +43,17 @@ function formatRollingPace(paceMinPerKm: number) {
 type RunState = "idle" | "tracking" | "finished";
 
 export default function Record() {
+  const router = useRouter();
+
   const [runState, setRunState] = useState<RunState>("idle");
-  // const [tracking, setTracking] = useState(false);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [distanceKm, setDistanceKm] = useState(0);
-  const recentSpeeds = useRef<number[]>([]); // Store recent speeds for smoothing
-  const [currentPaceMinPerKm, setCurrentPaceMinPerKm] = useState(0); // Current pace in min/km
+  const [currentPaceMinPerKm, setCurrentPaceMinPerKm] = useState(0);
   const [saving, setSaving] = useState(false);
 
   const mutedColor = useThemeColor({}, "muted");
   const tintColor = useThemeColor({}, "tint");
-  const bgColor = useThemeColor({}, "background");
+  const backgroundColor = useThemeColor({}, "background");
 
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const locationSubscription = useRef<Location.LocationSubscription | null>(
@@ -69,6 +62,7 @@ export default function Record() {
   const lastCoord = useRef<{ latitude: number; longitude: number } | null>(
     null,
   );
+  const recentSpeeds = useRef<number[]>([]);
 
   useEffect(() => {
     return () => {
@@ -76,6 +70,27 @@ export default function Record() {
       locationSubscription.current?.remove();
     };
   }, []);
+
+  function handleLocationUpdate(location: Location.LocationObject) {
+    const { latitude, longitude, speed } = location.coords;
+    if (lastCoord.current) {
+      const delta = haversineDistance(lastCoord.current, {
+        latitude,
+        longitude,
+      });
+      setDistanceKm((prev) => Math.round((prev + delta) * 100) / 100);
+    }
+    lastCoord.current = { latitude, longitude };
+
+    if (speed && speed > 0) {
+      recentSpeeds.current.push(speed);
+      if (recentSpeeds.current.length > 8) recentSpeeds.current.shift();
+      const avgSpeed =
+        recentSpeeds.current.reduce((a, b) => a + b, 0) /
+        recentSpeeds.current.length;
+      setCurrentPaceMinPerKm(avgSpeed > 0 ? 1000 / avgSpeed / 60 : 0);
+    }
+  }
 
   async function startTracking() {
     const { status } = await Location.requestForegroundPermissionsAsync();
@@ -96,37 +111,16 @@ export default function Record() {
         timeInterval: 1000,
         distanceInterval: 2,
       },
-      (location) => {
-        const { latitude, longitude, speed } = location.coords;
-        if (lastCoord.current) {
-          const delta = haversineDistance(lastCoord.current, {
-            latitude,
-            longitude,
-          });
-          setDistanceKm((prev) => prev + delta);
-        }
-        lastCoord.current = { latitude, longitude };
-
-        if (speed && speed > 0) {
-          recentSpeeds.current.push(speed);
-          if (recentSpeeds.current.length > 8) recentSpeeds.current.shift();
-          const avgSpeed =
-            recentSpeeds.current.reduce((a, b) => a + b, 0) /
-            recentSpeeds.current.length;
-          setCurrentPaceMinPerKm(avgSpeed > 0 ? 1000 / avgSpeed / 60 : 0);
-        }
-      },
+      handleLocationUpdate,
     );
   }
 
-  // pause tracking without resetting stats — used when user hits "Stop"
   function pauseTracking() {
     if (timerRef.current) clearInterval(timerRef.current);
     locationSubscription.current?.remove();
     setRunState("finished");
   }
 
-  // resume tracking from where it left off
   async function continueTracking() {
     const { status } = await Location.requestForegroundPermissionsAsync();
     if (status !== "granted") {
@@ -140,33 +134,13 @@ export default function Record() {
       setElapsedSeconds((prev) => prev + 1);
     }, 1000);
 
-    // don't reset lastCoord — next point will just calculate distance from where we paused
     locationSubscription.current = await Location.watchPositionAsync(
       {
         accuracy: Location.Accuracy.BestForNavigation,
         timeInterval: 1000,
         distanceInterval: 2,
       },
-      (location) => {
-        const { latitude, longitude, speed } = location.coords;
-        if (lastCoord.current) {
-          const delta = haversineDistance(lastCoord.current, {
-            latitude,
-            longitude,
-          });
-          setDistanceKm((prev) => prev + delta);
-        }
-        lastCoord.current = { latitude, longitude };
-
-        if (speed && speed > 0) {
-          recentSpeeds.current.push(speed);
-          if (recentSpeeds.current.length > 8) recentSpeeds.current.shift();
-          const avgSpeed =
-            recentSpeeds.current.reduce((a, b) => a + b, 0) /
-            recentSpeeds.current.length;
-          setCurrentPaceMinPerKm(avgSpeed > 0 ? 1000 / avgSpeed / 60 : 0);
-        }
-      },
+      handleLocationUpdate,
     );
   }
 
@@ -192,21 +166,26 @@ export default function Record() {
       return;
     }
 
-    const { error } = await supabase.from("runs").insert({
-      user_id: userId,
-      distance_km: Math.round(distanceKm * 100) / 100, // round to 2 decimal places
-      duration_seconds: elapsedSeconds,
-    });
+    const { data, error } = await supabase
+      .from("runs")
+      .insert({
+        user_id: userId,
+        distance_km: distanceKm,
+        duration_seconds: elapsedSeconds,
+      })
+      .select("id")
+      .single();
 
     setSaving(false);
 
-    if (error) {
+    if (error || !data) {
       console.log("save run error:", error);
       alert("Failed to save run.");
       return;
     }
 
     resetAll();
+    router.push(`/edit-run/${data.id}`);
   }
 
   function discardRun() {
@@ -264,11 +243,7 @@ export default function Record() {
           }}
         >
           <ThemedText
-            style={{
-              color: bgColor,
-              fontSize: 14,
-              fontWeight: "600",
-            }}
+            style={{ color: backgroundColor, fontSize: 14, fontWeight: "600" }}
           >
             Start
           </ThemedText>
@@ -279,7 +254,7 @@ export default function Record() {
         <TouchableOpacity
           onPress={pauseTracking}
           style={{
-            backgroundColor: "e74c3c",
+            backgroundColor: "#e74c3c",
             width: 80,
             height: 80,
             borderRadius: 40,
@@ -289,11 +264,7 @@ export default function Record() {
           }}
         >
           <ThemedText
-            style={{
-              color: "#fff",
-              fontSize: 14,
-              fontWeight: "600",
-            }}
+            style={{ color: "#fff", fontSize: 14, fontWeight: "600" }}
           >
             Stop
           </ThemedText>

@@ -20,7 +20,7 @@ export default function Home() {
   useFocusEffect(
     useCallback(() => {
       refetch();
-    }, [userId]),
+    }, [refetch]),
   );
 
   if (loading) {

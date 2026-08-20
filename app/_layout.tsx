@@ -75,6 +75,7 @@ export default function RootLayout() {
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="auth" options={{ headerShown: false }} />
         <Stack.Screen name="settings" options={{ title: "Settings" }} />
+        <Stack.Screen name="edit-run/[id]" options={{ title: "Edit Run" }} />
       </Stack>
     </ThemeProvider>
   );

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/lib/supabase";
 import { Run } from "@/types/run";
 
@@ -6,7 +6,7 @@ export function useRuns(userId: string) {
   const [runs, setRuns] = useState<Run[]>([]);
   const [loading, setLoading] = useState(true);
 
-  async function fetchRuns() {
+  const fetchRuns = useCallback(async () => {
     if (!userId) {
       setLoading(false);
       return;
@@ -21,11 +21,11 @@ export function useRuns(userId: string) {
     if (error) console.log("runs error:", error);
     setRuns(data ?? []);
     setLoading(false);
-  }
+  }, [userId]);
 
   useEffect(() => {
     fetchRuns();
-  }, [userId]);
+  }, [fetchRuns]);
 
   async function deleteRun(runId: string) {
     const { error } = await supabase.from("runs").delete().eq("id", runId);
@@ -33,10 +33,27 @@ export function useRuns(userId: string) {
       console.log("delete run error:", error);
       return false;
     }
-
-    setRuns((prevRuns) => prevRuns.filter((run) => run.id !== runId));
+    setRuns((prev) => prev.filter((r) => r.id !== runId));
     return true;
   }
 
-  return { runs, loading, deleteRun, refetch: fetchRuns };
+  async function updateRun(
+    runId: string,
+    updates: { title?: string; photo_url?: string },
+  ) {
+    const { error } = await supabase
+      .from("runs")
+      .update(updates)
+      .eq("id", runId);
+    if (error) {
+      console.log("update run error:", error);
+      return false;
+    }
+    setRuns((prev) =>
+      prev.map((r) => (r.id === runId ? { ...r, ...updates } : r)),
+    );
+    return true;
+  }
+
+  return { runs, loading, deleteRun, updateRun, refetch: fetchRuns };
 }
