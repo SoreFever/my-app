@@ -6,6 +6,7 @@ import { useThemeColor } from "@/hooks/use-theme-color";
 import { Alert, TouchableOpacity } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
+import { markRunsDirty } from "@/lib/runsSignal";
 
 interface RunCardProps {
   run: Run;
@@ -50,7 +51,14 @@ export function RunCard({ run, onDelete }: RunCardProps) {
   function confirmDelete() {
     Alert.alert("Delete run", "This can't be undone.", [
       { text: "Cancel", style: "cancel" },
-      { text: "Delete", style: "destructive", onPress: () => onDelete(run.id) },
+      {
+        text: "Delete",
+        style: "destructive",
+        onPress: () => {
+          onDelete(run.id);
+          markRunsDirty();
+        },
+      },
     ]);
   }
 

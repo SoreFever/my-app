@@ -6,6 +6,7 @@ import { ThemedView } from "@/components/themed-view";
 import { ThemedText } from "@/components/themed-text";
 import { useThemeColor } from "@/hooks/use-theme-color";
 import { supabase } from "@/lib/supabase";
+import { markRunsDirty } from "@/lib/runsSignal";
 
 function haversineDistance(
   coord1: { latitude: number; longitude: number },
@@ -184,6 +185,7 @@ export default function Record() {
       return;
     }
 
+    markRunsDirty();
     resetAll();
     router.push(`/edit-run/${data.id}`);
   }

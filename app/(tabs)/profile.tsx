@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { supabase } from "@/lib/supabase";
 import {
   View,
@@ -7,13 +7,14 @@ import {
   TouchableOpacity,
   ActivityIndicator,
 } from "react-native";
-import { useRouter } from "expo-router";
+import { useFocusEffect, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { appStyles } from "@/constants/styles";
 import { useRuns } from "@/hooks/useRuns";
 import { useThemeColor } from "@/hooks/use-theme-color";
 import { ThemedView } from "@/components/themed-view";
 import { ThemedText } from "@/components/themed-text";
+import { consumeRunsDirty } from "@/lib/runsSignal";
 
 export default function Profile() {
   const router = useRouter();
@@ -46,7 +47,15 @@ export default function Profile() {
       });
   }, [userId]);
 
-  const { runs, loading } = useRuns(userId ?? "");
+  const { runs, loading, deleteRun, refetch } = useRuns(userId ?? "");
+
+  useFocusEffect(
+    useCallback(() => {
+      if (consumeRunsDirty()) {
+        refetch();
+      }
+    }, [refetch]),
+  );
 
   const stats = useMemo(() => {
     const totalRuns = runs.length;

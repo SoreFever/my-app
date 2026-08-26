@@ -5,6 +5,7 @@ import { useEffect, useState, useCallback } from "react";
 import { supabase } from "@/lib/supabase";
 import { ActivityIndicator, View } from "react-native";
 import { useFocusEffect } from "expo-router";
+import { consumeRunsDirty } from "@/lib/runsSignal";
 
 export default function Home() {
   const [userId, setUserId] = useState<string | null>(null);
@@ -19,7 +20,9 @@ export default function Home() {
 
   useFocusEffect(
     useCallback(() => {
-      refetch();
+      if (consumeRunsDirty()) {
+        refetch();
+      }
     }, [refetch]),
   );
 
