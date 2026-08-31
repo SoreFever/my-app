@@ -64,6 +64,13 @@ export default function Record() {
     null,
   );
   const recentSpeeds = useRef<number[]>([]);
+  const LOCATION_OPTIONS = {
+    accuracy: Location.Accuracy.BestForNavigation,
+    timeInterval: 1000,
+    distanceInterval: 2,
+  };
+  const [elevationGainM, setElevationGainM] = useState(0);
+  const lastAltitude = useRef<number | null>(null);
 
   useEffect(() => {
     return () => {
@@ -73,7 +80,7 @@ export default function Record() {
   }, []);
 
   function handleLocationUpdate(location: Location.LocationObject) {
-    const { latitude, longitude, speed } = location.coords;
+    const { latitude, longitude, speed, altitude } = location.coords;
     if (lastCoord.current) {
       const delta = haversineDistance(lastCoord.current, {
         latitude,
@@ -82,6 +89,16 @@ export default function Record() {
       setDistanceKm((prev) => Math.round((prev + delta) * 100) / 100);
     }
     lastCoord.current = { latitude, longitude };
+
+    if (altitude != null) {
+      if (lastAltitude.current != null) {
+        const altDelta = altitude - lastAltitude.current;
+        if (altDelta > 0) {
+          setElevationGainM((prev) => Math.round((prev + altDelta) * 10) / 10);
+        }
+      }
+      lastAltitude.current = altitude;
+    }
 
     if (speed && speed > 0) {
       recentSpeeds.current.push(speed);
@@ -107,11 +124,7 @@ export default function Record() {
     }, 1000);
 
     locationSubscription.current = await Location.watchPositionAsync(
-      {
-        accuracy: Location.Accuracy.BestForNavigation,
-        timeInterval: 1000,
-        distanceInterval: 2,
-      },
+      LOCATION_OPTIONS,
       handleLocationUpdate,
     );
   }
@@ -136,11 +149,7 @@ export default function Record() {
     }, 1000);
 
     locationSubscription.current = await Location.watchPositionAsync(
-      {
-        accuracy: Location.Accuracy.BestForNavigation,
-        timeInterval: 1000,
-        distanceInterval: 2,
-      },
+      LOCATION_OPTIONS,
       handleLocationUpdate,
     );
   }
@@ -149,7 +158,9 @@ export default function Record() {
     setElapsedSeconds(0);
     setDistanceKm(0);
     setCurrentPaceMinPerKm(0);
+    setElevationGainM(0);
     lastCoord.current = null;
+    lastAltitude.current = null;
     recentSpeeds.current = [];
     setRunState("idle");
   }
@@ -173,6 +184,7 @@ export default function Record() {
         user_id: userId,
         distance_km: distanceKm,
         duration_seconds: elapsedSeconds,
+        elevationGainM: elevationGainM,
       })
       .select("id")
       .single();
