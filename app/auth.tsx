@@ -1,13 +1,22 @@
 import React, { useState } from "react";
-import { Alert, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { Alert, TextInput, TouchableOpacity} from "react-native";
 import { supabase } from "@/lib/supabase";
 import { appStyles } from "@/constants/styles";
+import { useThemeColor } from "@/hooks/use-theme-color";
+import { ThemedView } from "@/components/themed-view";
+import { ThemedText } from "@/components/themed-text";
 
 export default function Auth() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const styles = appStyles;
+
+  const textColor = useThemeColor({}, "text");
+  const mutedColor = useThemeColor({}, "muted");
+  const borderColor = useThemeColor({}, "border");
+  const tintColor = useThemeColor({}, "tint");
+  const backgroundColor = useThemeColor({}, "background");
 
   async function signInWithEmail() {
     setLoading(true);
@@ -32,46 +41,48 @@ export default function Auth() {
   }
 
   return (
-    <View style={styles.container}>
-      <View style={[styles.verticallySpaced, styles.mt20]}>
-        <Text style={styles.label}>Email</Text>
+    <ThemedView style={styles.container}>
+      <ThemedView style={[styles.verticallySpaced, styles.mt20]}>
+        <ThemedText style={[styles.label, {color: mutedColor}]}>Email</ThemedText>
         <TextInput
           onChangeText={(text) => setEmail(text)}
           value={email}
           placeholder="email@address.com"
+          placeholderTextColor={mutedColor}
           autoCapitalize="none"
-          style={styles.input}
+          style={[styles.input, {color: textColor, borderColor}]}
         />
-      </View>
-      <View style={styles.verticallySpaced}>
-        <Text style={styles.label}>Password</Text>
+      </ThemedView>
+      <ThemedView style={styles.verticallySpaced}>
+        <ThemedText style={[styles.label, {color: mutedColor}]}>Password</ThemedText>
         <TextInput
           onChangeText={(text) => setPassword(text)}
           value={password}
           secureTextEntry={true}
           placeholder="Password"
+          placeholderTextColor={mutedColor}
           autoCapitalize="none"
-          style={styles.input}
+          style={[styles.input, {color: textColor, borderColor}]}
         />
-      </View>
-      <View style={[styles.verticallySpaced, styles.mt20]}>
+      </ThemedView>
+      <ThemedView style={[styles.verticallySpaced, styles.mt20]}>
         <TouchableOpacity
-          style={[styles.button, loading && styles.buttonDisabled]}
+          style={[styles.button, {backgroundColor: tintColor}, loading && styles.buttonDisabled]}
           onPress={() => signInWithEmail()}
           disabled={loading}
         >
-          <Text style={styles.buttonText}>Sign in</Text>
+          <ThemedText style={[styles.buttonText, {color: backgroundColor}]}>Sign in</ThemedText>
         </TouchableOpacity>
-      </View>
-      <View style={styles.verticallySpaced}>
+      </ThemedView>
+      <ThemedView style={styles.verticallySpaced}>
         <TouchableOpacity
           style={[styles.button, loading && styles.buttonDisabled]}
           onPress={() => signUpWithEmail()}
           disabled={loading}
         >
-          <Text style={styles.buttonText}>Sign up</Text>
+          <ThemedText style={styles.buttonText}>Sign up</ThemedText>
         </TouchableOpacity>
-      </View>
-    </View>
+      </ThemedView>
+    </ThemedView>
   );
 }

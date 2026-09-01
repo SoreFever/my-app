@@ -1,10 +1,11 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
-import { View, Alert, TextInput, Text, TouchableOpacity } from "react-native";
+import { Alert, TextInput, TouchableOpacity } from "react-native";
 import Avatar from "@/components/Avatar";
 import { appStyles } from "@/constants/styles";
 import { ThemedView } from "@/components/themed-view";
 import { ThemedText } from "@/components/themed-text";
+import { useThemeColor } from "@/hooks/use-theme-color";
 
 export default function Settings() {
   const [userId, setUserId] = useState<string | null>(null);
@@ -14,6 +15,9 @@ export default function Settings() {
   const [website, setWebsite] = useState("");
   const [avatarUrl, setAvatarUrl] = useState("");
   const styles = appStyles;
+  const cardColor = useThemeColor({}, 'card')
+  const borderColor = useThemeColor({}, 'border')
+  const mutedColor = useThemeColor({}, 'muted')
 
   // NEW: fetch the session on mount
   useEffect(() => {
@@ -100,7 +104,7 @@ export default function Settings() {
           value={email ?? ""}
           editable={false}
           selectTextOnFocus={false}
-          style={[styles.input, styles.inputDisabled]}
+          style={[styles.input, styles.inputDisabled, {backgroundColor: cardColor, borderColor, color: mutedColor}]}
         />
       </ThemedView>
       <ThemedView style={styles.verticallySpaced}>
