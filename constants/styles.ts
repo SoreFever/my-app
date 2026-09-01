@@ -16,7 +16,6 @@ export const appStyles = StyleSheet.create({
   label: {
     fontSize: 16,
     fontWeight: "600",
-    color: "#86939e",
     marginBottom: 6,
   },
   input: {
@@ -27,9 +26,9 @@ export const appStyles = StyleSheet.create({
     fontSize: 16,
   },
   inputDisabled: {
-    backgroundColor: "#f2f2f2",
-    borderColor: "#d1d1d1",
-    color: "#9e9e9e",
+    borderRadius: 4,
+    padding: 12,
+    fontSize: 16,
   },
   button: {
     backgroundColor: "lightblue",
@@ -61,10 +60,8 @@ export const appStyles = StyleSheet.create({
     paddingTop: 0,
   },
   noImage: {
-    backgroundColor: "#333",
     borderWidth: 1,
     borderStyle: "solid",
-    borderColor: "rgb(200, 200, 200)",
     borderRadius: 5,
   },
 });

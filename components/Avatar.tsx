@@ -3,6 +3,7 @@ import { supabase } from "@/lib/supabase";
 import { View, Alert, Image, Text, TouchableOpacity } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import { appStyles } from "@/constants/styles";
+import { useThemeColor } from "@/hooks/use-theme-color";
 
 interface Props {
   size: number;
@@ -14,6 +15,9 @@ export default function Avatar({ url, size = 150, onUpload }: Props) {
   const [uploading, setUploading] = useState(false);
   const avatarSize = { height: size, width: size, borderRadius: size / 2 };
   const styles = appStyles;
+
+  const cardColor = useThemeColor({}, "card");
+  const borderColor = useThemeColor({}, "border");
 
   async function uploadAvatar() {
     try {
@@ -76,7 +80,14 @@ export default function Avatar({ url, size = 150, onUpload }: Props) {
           style={[avatarSize, styles.avatar, styles.image]}
         />
       ) : (
-        <View style={[avatarSize, styles.avatar, styles.noImage]} />
+        <View
+          style={[
+            avatarSize,
+            styles.avatar,
+            styles.noImage,
+            { backgroundColor: cardColor, borderColor },
+          ]}
+        />
       )}
       <View>
         <TouchableOpacity
