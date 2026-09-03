@@ -7,6 +7,13 @@ import { ThemedText } from "@/components/themed-text";
 import { useThemeColor } from "@/hooks/use-theme-color";
 import { supabase } from "@/lib/supabase";
 import { markRunsDirty } from "@/lib/runsSignal";
+import MapView, { Polyline, Marker } from "react-native-maps";
+
+const LOCATION_OPTIONS = {
+  accuracy: Location.Accuracy.BestForNavigation,
+  timeInterval: 1000,
+  distanceInterval: 2,
+};
 
 function haversineDistance(
   coord1: { latitude: number; longitude: number },
@@ -42,6 +49,7 @@ function formatRollingPace(paceMinPerKm: number) {
 }
 
 type RunState = "idle" | "tracking" | "finished";
+type Coord = { latitude: number; longitude: number };
 
 export default function Record() {
   const router = useRouter();
@@ -51,6 +59,14 @@ export default function Record() {
   const [distanceKm, setDistanceKm] = useState(0);
   const [currentPaceMinPerKm, setCurrentPaceMinPerKm] = useState(0);
   const [saving, setSaving] = useState(false);
+
+  const [routeCoords, setRouteCoords] = useState<Coord[]>([]);
+  const [currentRegion, setCurrentRegion] = useState<{
+    latitude: number;
+    longitude: number;
+    latitudeDelta: number;
+    longitudeDelta: number;
+  } | null>(null);
 
   const mutedColor = useThemeColor({}, "muted");
   const tintColor = useThemeColor({}, "tint");
@@ -63,16 +79,24 @@ export default function Record() {
   const lastCoord = useRef<{ latitude: number; longitude: number } | null>(
     null,
   );
-  const recentSpeeds = useRef<number[]>([]);
-  const LOCATION_OPTIONS = {
-    accuracy: Location.Accuracy.BestForNavigation,
-    timeInterval: 1000,
-    distanceInterval: 2,
-  };
-  const [elevationGainM, setElevationGainM] = useState(0);
   const lastAltitude = useRef<number | null>(null);
+  const [elevationGainM, setElevationGainM] = useState(0);
+  const recentSpeeds = useRef<number[]>([]);
+  const mapRef = useRef<MapView | null>(null);
 
   useEffect(() => {
+    Location.getCurrentPositionAsync({})
+      .then((location) => {
+        const { latitude, longitude } = location.coords;
+        setCurrentRegion({
+          latitude,
+          longitude,
+          latitudeDelta: 0.005,
+          longitudeDelta: 0.005,
+        });
+      })
+      .catch(() => {});
+
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
       locationSubscription.current?.remove();
@@ -81,14 +105,24 @@ export default function Record() {
 
   function handleLocationUpdate(location: Location.LocationObject) {
     const { latitude, longitude, speed, altitude } = location.coords;
+    const newCoord = { latitude, longitude };
+
     if (lastCoord.current) {
-      const delta = haversineDistance(lastCoord.current, {
-        latitude,
-        longitude,
-      });
+      const delta = haversineDistance(lastCoord.current, newCoord);
       setDistanceKm((prev) => Math.round((prev + delta) * 100) / 100);
     }
-    lastCoord.current = { latitude, longitude };
+    lastCoord.current = newCoord;
+    setRouteCoords((prev) => [...prev, newCoord]);
+    setCurrentRegion((prev) => ({
+      latitude,
+      longitude,
+      latitudeDelta: prev?.latitudeDelta ?? 0.005,
+      longitudeDelta: prev?.longitudeDelta ?? 0.005,
+    }));
+    mapRef.current?.animateCamera(
+      { center: { latitude, longitude } },
+      { duration: 500 },
+    );
 
     if (altitude != null) {
       if (lastAltitude.current != null) {
@@ -159,6 +193,7 @@ export default function Record() {
     setDistanceKm(0);
     setCurrentPaceMinPerKm(0);
     setElevationGainM(0);
+    setRouteCoords([]);
     lastCoord.current = null;
     lastAltitude.current = null;
     recentSpeeds.current = [];
@@ -184,7 +219,7 @@ export default function Record() {
         user_id: userId,
         distance_km: distanceKm,
         duration_seconds: elapsedSeconds,
-        elevationGainM: elevationGainM,
+        elevation_gain_m: elevationGainM,
       })
       .select("id")
       .single();
@@ -207,117 +242,154 @@ export default function Record() {
   }
 
   return (
-    <ThemedView
-      style={{
-        flex: 1,
-        justifyContent: "space-between",
-        padding: 24,
-        paddingTop: 60,
-        paddingBottom: 60,
-      }}
-    >
-      <ThemedView style={{ alignItems: "center" }}>
-        <ThemedText style={{ fontSize: 16, color: mutedColor }}>
-          Distance
-        </ThemedText>
-        <ThemedText style={{ fontSize: 32, fontWeight: "600", lineHeight: 38 }}>
-          {distanceKm.toFixed(2)} km
-        </ThemedText>
-      </ThemedView>
-
-      <ThemedView style={{ alignItems: "center" }}>
-        <ThemedText style={{ fontSize: 16, color: mutedColor }}>
-          Time
-        </ThemedText>
-        <ThemedText style={{ fontSize: 56, fontWeight: "700", lineHeight: 64 }}>
-          {formatTimer(elapsedSeconds)}
-        </ThemedText>
-      </ThemedView>
-
-      <ThemedView style={{ alignItems: "center" }}>
-        <ThemedText style={{ fontSize: 16, color: mutedColor }}>
-          Pace
-        </ThemedText>
-        <ThemedText style={{ fontSize: 32, fontWeight: "600", lineHeight: 38 }}>
-          {formatRollingPace(currentPaceMinPerKm)} /km
-        </ThemedText>
-      </ThemedView>
-
-      {runState === "idle" && (
-        <TouchableOpacity
-          onPress={startTracking}
-          style={{
-            backgroundColor: tintColor,
-            width: 80,
-            height: 80,
-            borderRadius: 40,
-            alignItems: "center",
-            justifyContent: "center",
-            alignSelf: "center",
-          }}
+    <ThemedView style={{ flex: 1 }}>
+      {currentRegion && (
+        <MapView
+          ref={mapRef}
+          style={{ width: "100%", height: 260 }}
+          initialRegion={currentRegion}
+          showsUserLocation
+          followsUserLocation={runState === "tracking"}
         >
-          <ThemedText
-            style={{ color: backgroundColor, fontSize: 14, fontWeight: "600" }}
-          >
-            Start
-          </ThemedText>
-        </TouchableOpacity>
+          {routeCoords.length > 1 && (
+            <Polyline
+              coordinates={routeCoords}
+              strokeColor={tintColor}
+              strokeWidth={4}
+            />
+          )}
+          {routeCoords.length > 0 && (
+            <Marker
+              coordinate={routeCoords[0]}
+              title="Start"
+              pinColor="green"
+            />
+          )}
+        </MapView>
       )}
 
-      {runState === "tracking" && (
-        <TouchableOpacity
-          onPress={pauseTracking}
-          style={{
-            backgroundColor: "#e74c3c",
-            width: 80,
-            height: 80,
-            borderRadius: 40,
-            alignItems: "center",
-            justifyContent: "center",
-            alignSelf: "center",
-          }}
-        >
-          <ThemedText
-            style={{ color: "#fff", fontSize: 14, fontWeight: "600" }}
-          >
-            Stop
+      <ThemedView
+        style={{
+          flex: 1,
+          justifyContent: "space-between",
+          padding: 24,
+          paddingTop: 20,
+          paddingBottom: 60,
+        }}
+      >
+        <ThemedView style={{ alignItems: "center" }}>
+          <ThemedText style={{ fontSize: 16, color: mutedColor }}>
+            Distance
           </ThemedText>
-        </TouchableOpacity>
-      )}
-
-      {runState === "finished" && (
-        <ThemedView
-          style={{ flexDirection: "row", justifyContent: "space-around" }}
-        >
-          <TouchableOpacity
-            onPress={continueTracking}
-            style={{ alignItems: "center" }}
+          <ThemedText
+            style={{ fontSize: 32, fontWeight: "600", lineHeight: 38 }}
           >
-            <ThemedText style={{ color: tintColor, fontWeight: "600" }}>
-              Continue
-            </ThemedText>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            onPress={discardRun}
-            style={{ alignItems: "center" }}
-          >
-            <ThemedText style={{ color: "#e74c3c", fontWeight: "600" }}>
-              Discard
-            </ThemedText>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            onPress={saveRun}
-            disabled={saving}
-            style={{ alignItems: "center" }}
-          >
-            <ThemedText style={{ color: tintColor, fontWeight: "600" }}>
-              {saving ? "Saving..." : "Save"}
-            </ThemedText>
-          </TouchableOpacity>
+            {distanceKm.toFixed(2)} km
+          </ThemedText>
         </ThemedView>
-      )}
+
+        <ThemedView style={{ alignItems: "center" }}>
+          <ThemedText style={{ fontSize: 16, color: mutedColor }}>
+            Time
+          </ThemedText>
+          <ThemedText
+            style={{ fontSize: 56, fontWeight: "700", lineHeight: 64 }}
+          >
+            {formatTimer(elapsedSeconds)}
+          </ThemedText>
+        </ThemedView>
+
+        <ThemedView style={{ alignItems: "center" }}>
+          <ThemedText style={{ fontSize: 16, color: mutedColor }}>
+            Pace
+          </ThemedText>
+          <ThemedText
+            style={{ fontSize: 32, fontWeight: "600", lineHeight: 38 }}
+          >
+            {formatRollingPace(currentPaceMinPerKm)} /km
+          </ThemedText>
+        </ThemedView>
+
+        {runState === "idle" && (
+          <TouchableOpacity
+            onPress={startTracking}
+            style={{
+              backgroundColor: tintColor,
+              width: 80,
+              height: 80,
+              borderRadius: 40,
+              alignItems: "center",
+              justifyContent: "center",
+              alignSelf: "center",
+            }}
+          >
+            <ThemedText
+              style={{
+                color: backgroundColor,
+                fontSize: 14,
+                fontWeight: "600",
+              }}
+            >
+              Start
+            </ThemedText>
+          </TouchableOpacity>
+        )}
+
+        {runState === "tracking" && (
+          <TouchableOpacity
+            onPress={pauseTracking}
+            style={{
+              backgroundColor: "#e74c3c",
+              width: 80,
+              height: 80,
+              borderRadius: 40,
+              alignItems: "center",
+              justifyContent: "center",
+              alignSelf: "center",
+            }}
+          >
+            <ThemedText
+              style={{ color: "#fff", fontSize: 14, fontWeight: "600" }}
+            >
+              Stop
+            </ThemedText>
+          </TouchableOpacity>
+        )}
+
+        {runState === "finished" && (
+          <ThemedView
+            style={{ flexDirection: "row", justifyContent: "space-around" }}
+          >
+            <TouchableOpacity
+              onPress={continueTracking}
+              style={{ alignItems: "center" }}
+            >
+              <ThemedText style={{ color: tintColor, fontWeight: "600" }}>
+                Continue
+              </ThemedText>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              onPress={discardRun}
+              style={{ alignItems: "center" }}
+            >
+              <ThemedText style={{ color: "#e74c3c", fontWeight: "600" }}>
+                Discard
+              </ThemedText>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              onPress={saveRun}
+              disabled={saving}
+              style={{ alignItems: "center" }}
+            >
+              <ThemedText style={{ color: tintColor, fontWeight: "600" }}>
+                {saving ? "Saving..." : "Save"}
+              </ThemedText>
+            </TouchableOpacity>
+          </ThemedView>
+        )}
+      </ThemedView>
     </ThemedView>
   );
 }
