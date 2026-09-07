@@ -1,12 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { supabase } from "@/lib/supabase";
-import {
-  View,
-  Image,
-  Text,
-  TouchableOpacity,
-  ActivityIndicator,
-} from "react-native";
+import { Image, TouchableOpacity, ActivityIndicator } from "react-native";
 import { useFocusEffect, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { appStyles } from "@/constants/styles";
@@ -107,47 +101,59 @@ export default function Profile() {
         </ThemedText>
       </ThemedView>
 
-      <ThemedView
-        style={{
-          flexDirection: "row",
-          justifyContent: "space-around",
-          marginTop: 24,
-          paddingVertical: 16,
-        }}
-      >
-        <ThemedView style={{ alignItems: "center" }}>
-          <ThemedText style={{ fontSize: 18, fontWeight: "600" }}>
-            {stats.totalRuns}
-          </ThemedText>
-          <ThemedText style={{ fontSize: 12, color: "mutedColor" }}>
-            Runs
+      {loading ? (
+        <ThemedView style={{ paddingVertical: 20, alignItems: "center" }}>
+          <ActivityIndicator size="large" color={mutedColor} />
+        </ThemedView>
+      ) : stats.totalRuns === 0 ? (
+        <ThemedView style={{ paddingVertical: 20, alignItems: "center" }}>
+          <ThemedText style={{ fontSize: 16, color: mutedColor }}>
+            No runs yet. Start tracking to see your stats here.
           </ThemedText>
         </ThemedView>
-        <ThemedView style={{ alignItems: "center" }}>
-          <ThemedText style={{ fontSize: 18, fontWeight: "600" }}>
-            {stats.totalDistance} km
-          </ThemedText>
-          <ThemedText style={{ fontSize: 12, color: "mutedColor" }}>
-            Distance
-          </ThemedText>
+      ) : (
+        <ThemedView
+          style={{
+            flexDirection: "row",
+            justifyContent: "space-around",
+            marginTop: 24,
+            paddingVertical: 20,
+          }}
+        >
+          <ThemedView style={{ alignItems: "center" }}>
+            <ThemedText style={{ fontSize: 18, fontWeight: "600" }}>
+              {stats.totalRuns}
+            </ThemedText>
+            <ThemedText style={{ fontSize: 12, color: mutedColor }}>
+              Runs
+            </ThemedText>
+          </ThemedView>
+          <ThemedView style={{ alignItems: "center" }}>
+            <ThemedText style={{ fontSize: 18, fontWeight: "600" }}>
+              {stats.totalDistance} km
+            </ThemedText>
+            <ThemedText style={{ fontSize: 12, color: mutedColor }}>
+              Distance
+            </ThemedText>
+          </ThemedView>
+          <ThemedView style={{ alignItems: "center" }}>
+            <ThemedText style={{ fontSize: 18, fontWeight: "600" }}>
+              {stats.totalHours} h
+            </ThemedText>
+            <ThemedText style={{ fontSize: 12, color: mutedColor }}>
+              Time
+            </ThemedText>
+          </ThemedView>
+          <ThemedView style={{ alignItems: "center" }}>
+            <ThemedText style={{ fontSize: 18, fontWeight: "600" }}>
+              {stats.avgPace}
+            </ThemedText>
+            <ThemedText style={{ fontSize: 12, color: mutedColor }}>
+              Avg Pace
+            </ThemedText>
+          </ThemedView>
         </ThemedView>
-        <ThemedView style={{ alignItems: "center" }}>
-          <ThemedText style={{ fontSize: 18, fontWeight: "600" }}>
-            {stats.totalHours} h
-          </ThemedText>
-          <ThemedText style={{ fontSize: 12, color: "mutedColor" }}>
-            Time
-          </ThemedText>
-        </ThemedView>
-        <ThemedView style={{ alignItems: "center" }}>
-          <ThemedText style={{ fontSize: 18, fontWeight: "600" }}>
-            {stats.avgPace}
-          </ThemedText>
-          <ThemedText style={{ fontSize: 12, color: "mutedColor" }}>
-            Avg Pace
-          </ThemedText>
-        </ThemedView>
-      </ThemedView>
+      )}
     </ThemedView>
   );
 }
