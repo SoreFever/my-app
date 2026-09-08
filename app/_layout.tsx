@@ -7,7 +7,7 @@ import {
   DarkTheme,
   DefaultTheme,
   ThemeProvider,
-} from "@react-navigation/native";
+} from "expo-router/react-navigation";
 import { Colors } from "@/constants/theme";
 
 export default function RootLayout() {
@@ -15,7 +15,7 @@ export default function RootLayout() {
   const [initialized, setInitialized] = useState(false);
   const router = useRouter();
   const segments = useSegments();
-  const colorScheme = useColorScheme() ?? "light";
+  const colorScheme = useColorScheme() === "dark" ? "dark" : "light";
 
   useEffect(() => {
     supabase.auth.getClaims().then(({ data }) => {

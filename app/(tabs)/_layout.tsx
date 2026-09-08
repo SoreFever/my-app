@@ -6,7 +6,7 @@ import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { Tabs } from "expo-router";
 
 export default function TabLayout() {
-  const colorScheme = useColorScheme() ?? "light";
+  const colorScheme = useColorScheme() === "dark" ? "dark" : "light";
   const colors = Colors[colorScheme];
   return (
     <Tabs
