@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { TouchableOpacity } from "react-native";
+import { Alert, TouchableOpacity } from "react-native";
 import * as Location from "expo-location";
 import { useRouter } from "expo-router";
 import { ThemedView } from "@/components/themed-view";
@@ -8,6 +8,7 @@ import { useThemeColor } from "@/hooks/use-theme-color";
 import { supabase } from "@/lib/supabase";
 import { markRunsDirty } from "@/lib/runsSignal";
 import MapView, { Polyline, Marker } from "react-native-maps";
+import {AppState, AppStateStatus} from "react-native"
 
 const LOCATION_OPTIONS = {
   accuracy: Location.Accuracy.BestForNavigation,
@@ -83,6 +84,25 @@ export default function Record() {
   const [elevationGainM, setElevationGainM] = useState(0);
   const recentSpeeds = useRef<number[]>([]);
   const mapRef = useRef<MapView | null>(null);
+  const runStateRef = useRef<RunState>("idle");
+
+  useEffect(() => {
+    runStateRef.current = runState;
+  }, [runState]);
+
+  useEffect(() => {
+    const subscription = AppState.addEventListener("change", (nextState: AppStateStatus) => {
+      if (nextState === "background" && runStateRef.current === "tracking") {
+        pauseTracking();
+        Alert.alert(
+          "Run Paused",
+          "Tracking was paused because the app went to the background. Tap continue to resume."
+        );
+      }
+    });
+
+    return () => subscription.remove();
+  }, []);
 
   useEffect(() => {
     Location.getCurrentPositionAsync({})
