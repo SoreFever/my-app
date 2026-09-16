@@ -3,7 +3,7 @@ import { RunCard } from "@/components/RunCard";
 import { useRuns } from "@/hooks/useRuns";
 import { useEffect, useState, useCallback } from "react";
 import { supabase } from "@/lib/supabase";
-import { ActivityIndicator, View, TouchableOpacity } from "react-native";
+import { TouchableOpacity } from "react-native";
 import { useFocusEffect, useRouter } from "expo-router";
 import { consumeRunsDirty } from "@/lib/runsSignal";
 import { Ionicons } from "@expo/vector-icons";
@@ -80,7 +80,7 @@ export default function Home() {
     <FlashList
       data={runs}
       renderItem={({ item }) => <RunCard run={item} onDelete={deleteRun} />}
-      contentContainerStyle={{ padding: 12 }}
+      contentContainerStyle={{ padding: 12}}
     />
   );
 }

@@ -15,6 +15,7 @@ export default function Profile() {
   const styles = appStyles;
   const mutedColor = useThemeColor({}, "muted");
   const borderColor = useThemeColor({}, "border");
+  const bgColor = useThemeColor({}, "background");
 
   const [userId, setUserId] = useState<string | null>(null);
   const [username, setUsername] = useState("");

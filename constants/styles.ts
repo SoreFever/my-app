@@ -1,6 +1,7 @@
 import { StyleSheet } from "react-native";
 
 export const appStyles = StyleSheet.create({
+  
   container: {
     marginTop: 40,
     padding: 12,
