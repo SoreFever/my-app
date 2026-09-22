@@ -21,9 +21,9 @@ export default function Settings() {
 
   // NEW: fetch the session on mount
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setUserId(session?.user?.id ?? null);
-      setEmail(session?.user?.email);
+    supabase.auth.getSession().then(({ data }) => {
+      setUserId(data?.session?.user?.id ?? null);
+      setEmail(data?.session?.user?.email);
     });
   }, []);
 

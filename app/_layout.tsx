@@ -2,26 +2,24 @@
 import { useState, useEffect } from "react";
 import { Stack, useRouter, useSegments } from "expo-router";
 import { supabase } from "@/lib/supabase";
-import { useThemeColor } from "@/hooks/use-theme-color";
+import { ThemedView } from "@/components/themed-view";
+import { ActivityIndicator } from "react-native";
 
 export default function RootLayout() {
   const [userId, setUserId] = useState<string | null>(null);
   const [initialized, setInitialized] = useState(false);
   const router = useRouter();
   const segments = useSegments();
-  const bgColor = useThemeColor({}, "background");
 
   useEffect(() => {
-    supabase.auth.getClaims().then(({ data }) => {
-      setUserId(data?.claims?.sub ?? null);
+    supabase.auth.getSession().then(({ data }) => {
+      setUserId(data?.session?.user?.id ?? null);
       setInitialized(true);
     });
 
-    const { data: authListener } = supabase.auth.onAuthStateChange(
-      async (_event, _session) => {
-        const { data } = await supabase.auth.getClaims();
-        setUserId(data?.claims?.sub ?? null);
-      },
+    const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUserId(session?.user?.id ?? null);
+    }
     );
 
     return () => authListener.subscription.unsubscribe();
@@ -38,7 +36,15 @@ export default function RootLayout() {
     }
   }, [userId, initialized, segments]);
 
-  if (!initialized) return null; // or a splash/loading screen
+  if (!initialized) {
+      return (
+        <ThemedView
+          style={{ flex: 1, justifyContent: "center", alignItems: "center" }}
+        >
+          <ActivityIndicator size="large" />
+        </ThemedView>
+      );
+    }
 
   return (
     <Stack>

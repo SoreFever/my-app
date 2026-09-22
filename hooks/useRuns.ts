@@ -8,7 +8,6 @@ export function useRuns(userId: string) {
 
   const fetchRuns = useCallback(async () => {
     if (!userId) {
-      setLoading(false);
       return;
     }
     setLoading(true);
