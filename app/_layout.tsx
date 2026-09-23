@@ -1,4 +1,3 @@
-// app/_layout.tsx
 import { useState, useEffect } from "react";
 import { Stack, useRouter, useSegments } from "expo-router";
 import { supabase } from "@/lib/supabase";
@@ -17,9 +16,10 @@ export default function RootLayout() {
       setInitialized(true);
     });
 
-    const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUserId(session?.user?.id ?? null);
-    }
+    const { data: authListener } = supabase.auth.onAuthStateChange(
+      (_event, session) => {
+        setUserId(session?.user?.id ?? null);
+      },
     );
 
     return () => authListener.subscription.unsubscribe();
@@ -37,14 +37,14 @@ export default function RootLayout() {
   }, [userId, initialized, segments]);
 
   if (!initialized) {
-      return (
-        <ThemedView
-          style={{ flex: 1, justifyContent: "center", alignItems: "center" }}
-        >
-          <ActivityIndicator size="large" />
-        </ThemedView>
-      );
-    }
+    return (
+      <ThemedView
+        style={{ flex: 1, justifyContent: "center", alignItems: "center" }}
+      >
+        <ActivityIndicator size="large" />
+      </ThemedView>
+    );
+  }
 
   return (
     <Stack>

@@ -19,7 +19,6 @@ export default function Settings() {
   const borderColor = useThemeColor({}, 'border')
   const mutedColor = useThemeColor({}, 'muted')
 
-  // NEW: fetch the session on mount
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
       setUserId(data?.session?.user?.id ?? null);

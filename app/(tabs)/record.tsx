@@ -8,7 +8,7 @@ import { useThemeColor } from "@/hooks/use-theme-color";
 import { supabase } from "@/lib/supabase";
 import { markRunsDirty } from "@/lib/runsSignal";
 import MapView, { Polyline, Marker } from "react-native-maps";
-import {AppState, AppStateStatus} from "react-native"
+import { AppState, AppStateStatus } from "react-native";
 
 const LOCATION_OPTIONS = {
   accuracy: Location.Accuracy.BestForNavigation,
@@ -91,15 +91,18 @@ export default function Record() {
   }, [runState]);
 
   useEffect(() => {
-    const subscription = AppState.addEventListener("change", (nextState: AppStateStatus) => {
-      if (nextState === "background" && runStateRef.current === "tracking") {
-        pauseTracking();
-        Alert.alert(
-          "Run Paused",
-          "Tracking was paused because the app went to the background. Tap continue to resume."
-        );
-      }
-    });
+    const subscription = AppState.addEventListener(
+      "change",
+      (nextState: AppStateStatus) => {
+        if (nextState === "background" && runStateRef.current === "tracking") {
+          pauseTracking();
+          Alert.alert(
+            "Run Paused",
+            "Tracking was paused because the app went to the background. Tap continue to resume.",
+          );
+        }
+      },
+    );
 
     return () => subscription.remove();
   }, []);
