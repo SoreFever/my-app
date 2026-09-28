@@ -5,6 +5,7 @@ import { appStyles } from "@/constants/styles";
 import { useThemeColor } from "@/hooks/use-theme-color";
 import { ThemedView } from "@/components/themed-view";
 import { ThemedText } from "@/components/themed-text";
+import * as Linking from "expo-linking";
 
 export default function Auth() {
   const [email, setEmail] = useState("");
@@ -40,8 +41,23 @@ export default function Auth() {
     setLoading(false);
   }
 
+  async function resetPassword() {
+    if (!email) {
+      Alert.alert("Please enter your email first.");
+      return;
+    }
+
+    setLoading(true);
+    const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: Linking.createURL("reset-password"),
+    });
+    if (error) Alert.alert(error.message);
+    else Alert.alert("Check your email for a password reset link.");
+    setLoading(false);
+  }
+
   return (
-    <ThemedView style={styles.container}>
+    <ThemedView style={[styles.container, {flex: 1}]}>
       <ThemedView style={[styles.verticallySpaced, styles.mt20]}>
         <ThemedText style={[styles.label, { color: mutedColor }]}>
           Email
@@ -93,6 +109,13 @@ export default function Auth() {
           <ThemedText style={styles.buttonText}>Sign up</ThemedText>
         </TouchableOpacity>
       </ThemedView>
+      <TouchableOpacity onPress={resetPassword} disabled={loading}>
+        <ThemedText
+          style={{ color: tintColor, textAlign: "center", marginTop: 8 }}
+        >
+          Forgot password?
+        </ThemedText>
+      </TouchableOpacity>
     </ThemedView>
   );
 }

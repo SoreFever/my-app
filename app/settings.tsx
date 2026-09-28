@@ -83,7 +83,7 @@ export default function Settings() {
     }
   }
   return (
-    <ThemedView style={styles.container}>
+    <ThemedView style={[styles.container, {flex: 1}]}>
       <ThemedView>
         <Avatar
           size={150}
@@ -111,7 +111,7 @@ export default function Settings() {
         <TextInput
           value={username || ""}
           onChangeText={(text) => setUsername(text)}
-          style={styles.input}
+          style={[styles.input, {backgroundColor: cardColor, borderColor, color: mutedColor}]}
         />
       </ThemedView>
       <ThemedView style={styles.verticallySpaced}>
@@ -119,7 +119,7 @@ export default function Settings() {
         <TextInput
           value={website || ""}
           onChangeText={(text) => setWebsite(text)}
-          style={styles.input}
+          style={[styles.input, {backgroundColor: cardColor, borderColor, color: mutedColor}]}
         />
       </ThemedView>
       <ThemedView style={[styles.verticallySpaced, styles.mt20]}>
