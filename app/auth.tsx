@@ -49,7 +49,7 @@ export default function Auth() {
 
     setLoading(true);
     const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: Linking.createURL("reset-password"),
+      redirectTo: 'https://reset-password-ecru.vercel.app/',
     });
     if (error) Alert.alert(error.message);
     else Alert.alert("Check your email for a password reset link.");
