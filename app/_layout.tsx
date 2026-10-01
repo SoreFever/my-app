@@ -62,7 +62,19 @@ export default function RootLayout() {
       <Stack.Screen name="auth" options={{ headerShown: false }} />
       <Stack.Screen name="settings" options={{ title: "Settings" }} />
       <Stack.Screen name="edit-run/[id]" options={{ title: "Edit Run" }} />
-      <Stack.Screen name="reset-password" options={{ title: "Reset Password"}} />
+      <Stack.Screen
+        name="reset-password"
+        options={{ title: "Reset Password" }}
+      />
+      <Stack.Screen
+        name="change-username"
+        options={{ title: "Change Username" }}
+      />
+      <Stack.Screen name="change-email" options={{ title: "Change Email" }} />
+      <Stack.Screen
+        name="change-password"
+        options={{ title: "Change Password" }}
+      />
     </Stack>
   );
 }
