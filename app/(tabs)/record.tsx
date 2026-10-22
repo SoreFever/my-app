@@ -10,32 +10,31 @@ import { markRunsDirty } from "@/lib/runsSignal";
 import MapView, { Polyline, Marker } from "react-native-maps";
 import { AppState, AppStateStatus } from "react-native";
 
-const LOCATION_OPTIONS = {
-  accuracy: Location.Accuracy.BestForNavigation,
-  timeInterval: 1000,
-  distanceInterval: 2,
-};
-
 function haversineDistance(
   coord1: { latitude: number; longitude: number },
   coord2: { latitude: number; longitude: number },
 ) {
-  const R = 6371;
-  const dLat = ((coord2.latitude - coord1.latitude) * Math.PI) / 180;
-  const dLon = ((coord2.longitude - coord1.longitude) * Math.PI) / 180;
+  const R = 6371; // earth radius in km
+  const dLatitude = convertToRad(coord2.latitude - coord1.latitude);
+  const dLongitude = convertToRad(coord2.longitude - coord1.longitude);
   const a =
-    Math.sin(dLat / 2) ** 2 +
-    Math.cos((coord1.latitude * Math.PI) / 180) *
-      Math.cos((coord2.latitude * Math.PI) / 180) *
-      Math.sin(dLon / 2) ** 2;
+    Math.sin(dLatitude / 2) ** 2 +
+    Math.cos(convertToRad(coord1.latitude)) *
+      Math.cos(convertToRad(coord2.latitude)) *
+      Math.sin(dLongitude / 2) ** 2;
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   return R * c;
+}
+
+function convertToRad(degree: number) {
+  return (degree * Math.PI) / 180;
 }
 
 function formatTimer(seconds: number) {
   const h = Math.floor(seconds / 3600);
   const m = Math.floor((seconds % 3600) / 60);
   const s = seconds % 60;
+
   if (h > 0) {
     return `${h}:${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
   }
@@ -52,15 +51,22 @@ function formatRollingPace(paceMinPerKm: number) {
 type RunState = "idle" | "tracking" | "finished";
 type Coord = { latitude: number; longitude: number };
 
+const LOCATION_OPTIONS = {
+  accuracy: Location.Accuracy.Highest,
+  distanceInterval: 5,
+};
+
 export default function Record() {
   const router = useRouter();
 
-  const [runState, setRunState] = useState<RunState>("idle");
-  const [elapsedSeconds, setElapsedSeconds] = useState(0);
-  const [distanceKm, setDistanceKm] = useState(0);
-  const [currentPaceMinPerKm, setCurrentPaceMinPerKm] = useState(0);
-  const [saving, setSaving] = useState(false);
+  // Theming
+  const mutedColor = useThemeColor({}, "muted");
+  const tintColor = useThemeColor({}, "tint");
+  const backgroundColor = useThemeColor({}, "background");
 
+  // Tracking
+  const [runState, setRunState] = useState<RunState>("idle");
+  const [saving, setSaving] = useState(false);
   const [routeCoords, setRouteCoords] = useState<Coord[]>([]);
   const [currentRegion, setCurrentRegion] = useState<{
     latitude: number;
@@ -68,23 +74,28 @@ export default function Record() {
     latitudeDelta: number;
     longitudeDelta: number;
   } | null>(null);
-
-  const mutedColor = useThemeColor({}, "muted");
-  const tintColor = useThemeColor({}, "tint");
-  const backgroundColor = useThemeColor({}, "background");
-
-  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const recentSpeeds = useRef<number[]>([]);
+  const lastAltitude = useRef<number | null>(null);
   const locationSubscription = useRef<Location.LocationSubscription | null>(
     null,
   );
   const lastCoord = useRef<{ latitude: number; longitude: number } | null>(
     null,
   );
-  const lastAltitude = useRef<number | null>(null);
-  const [elevationGainM, setElevationGainM] = useState(0);
-  const recentSpeeds = useRef<number[]>([]);
+  const lastTimestamp = useRef(0);
+
+  // References
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const mapRef = useRef<MapView | null>(null);
   const runStateRef = useRef<RunState>("idle");
+  const segmentStartRef = useRef<number | null>(null);  // when current run segment started
+  const accumulatedMsRef = useRef(0);                   // total ms from earlier segments
+
+  // Viewable stats
+  const [elapsedSeconds, setElapsedSeconds] = useState(0);
+  const [distanceKm, setDistanceKm] = useState(0);
+  const [currentPaceMinPerKm, setCurrentPaceMinPerKm] = useState(0);
+  const [elevationGainM, setElevationGainM] = useState(0);
 
   useEffect(() => {
     runStateRef.current = runState;
@@ -127,14 +138,21 @@ export default function Record() {
   }, []);
 
   function handleLocationUpdate(location: Location.LocationObject) {
-    const { latitude, longitude, speed, altitude } = location.coords;
+    const { latitude, longitude, speed, altitude, accuracy } = location.coords;
+    if (accuracy == null || accuracy > 25) return; // ignore poor fixes
     const newCoord = { latitude, longitude };
 
     if (lastCoord.current) {
       const delta = haversineDistance(lastCoord.current, newCoord);
-      setDistanceKm((prev) => Math.round((prev + delta) * 100) / 100);
+      const dtSec = (location.timestamp - lastTimestamp.current) / 1000;
+      if (delta * 1000 < 2 || (dtSec > 0 && (delta * 1000) / dtSec > 12))
+        return;
+      setDistanceKm((prev) => prev + delta);
     }
+
     lastCoord.current = newCoord;
+    lastTimestamp.current = location.timestamp;
+
     setRouteCoords((prev) => [...prev, newCoord]);
     setCurrentRegion((prev) => ({
       latitude,
@@ -157,13 +175,16 @@ export default function Record() {
       lastAltitude.current = altitude;
     }
 
-    if (speed && speed > 0) {
+    if (speed != null && speed > 0.8) {
       recentSpeeds.current.push(speed);
       if (recentSpeeds.current.length > 8) recentSpeeds.current.shift();
-      const avgSpeed =
+      const avg =
         recentSpeeds.current.reduce((a, b) => a + b, 0) /
         recentSpeeds.current.length;
-      setCurrentPaceMinPerKm(avgSpeed > 0 ? 1000 / avgSpeed / 60 : 0);
+      setCurrentPaceMinPerKm(1000 / avg / 60);
+    } else {
+      recentSpeeds.current = [];
+      setCurrentPaceMinPerKm(0);
     }
   }
 
@@ -175,11 +196,8 @@ export default function Record() {
     }
 
     setRunState("tracking");
-
-    timerRef.current = setInterval(() => {
-      setElapsedSeconds((prev) => prev + 1);
-    }, 1000);
-
+    startTimer();
+    locationSubscription.current?.remove();
     locationSubscription.current = await Location.watchPositionAsync(
       LOCATION_OPTIONS,
       handleLocationUpdate,
@@ -187,9 +205,10 @@ export default function Record() {
   }
 
   function pauseTracking() {
-    if (timerRef.current) clearInterval(timerRef.current);
-    locationSubscription.current?.remove();
     setRunState("finished");
+    stopTimer();
+    locationSubscription.current?.remove();
+    locationSubscription.current = null;
   }
 
   async function continueTracking() {
@@ -200,27 +219,52 @@ export default function Record() {
     }
 
     setRunState("tracking");
-
-    timerRef.current = setInterval(() => {
-      setElapsedSeconds((prev) => prev + 1);
-    }, 1000);
-
+    startTimer();
+    locationSubscription.current?.remove();
     locationSubscription.current = await Location.watchPositionAsync(
       LOCATION_OPTIONS,
       handleLocationUpdate,
     );
   }
 
+  function startTimer() {
+    if (timerRef.current) clearInterval(timerRef.current);
+
+    segmentStartRef.current = Date.now();
+    timerRef.current = setInterval(() => {
+      if (segmentStartRef.current == null) return;
+      const totalMs = accumulatedMsRef.current + (Date.now() - segmentStartRef.current);
+      setElapsedSeconds(Math.floor(totalMs/1000));
+    }, 250);
+  }
+
+  function stopTimer() {
+    if (timerRef.current) clearInterval(timerRef.current);
+    timerRef.current = null;
+
+    if (segmentStartRef.current != null) {
+      accumulatedMsRef.current += Date.now() - segmentStartRef.current;
+      segmentStartRef.current = null;
+    }
+    setElapsedSeconds(Math.floor(accumulatedMsRef.current / 1000))
+  }
+
   function resetAll() {
+    // Viewable stats
     setElapsedSeconds(0);
     setDistanceKm(0);
     setCurrentPaceMinPerKm(0);
     setElevationGainM(0);
+
+    // Tracking
     setRouteCoords([]);
     lastCoord.current = null;
     lastAltitude.current = null;
     recentSpeeds.current = [];
     setRunState("idle");
+    lastTimestamp.current = 0;
+    accumulatedMsRef.current = 0;
+    segmentStartRef.current = null;
   }
 
   async function saveRun() {

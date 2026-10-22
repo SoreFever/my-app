@@ -66,6 +66,17 @@ export default function Settings() {
     ]);
   }
 
+  function confirmDeleteAccount() {
+    Alert.alert("Delete Account?", undefined, [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Delete Account",
+        style: "destructive",
+        onPress: () => supabase.auth.signOut(),
+      },
+    ]);
+  }
+
   return (
     <ThemedView style={{ flex: 1, padding: 16 }}>
       <ThemedText style={{ fontSize: 13, fontWeight: "600", marginBottom: 4 }}>
@@ -86,6 +97,12 @@ export default function Settings() {
         label="Change Password"
         onPress={() => router.push("/change-password")}
       />
+      <SettingsRow
+          icon="trash"
+          label="Delete Account"
+          onPress={confirmDeleteAccount}
+          destructive
+        />
 
       <ThemedText
         style={{

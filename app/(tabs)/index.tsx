@@ -22,6 +22,7 @@ export default function Home() {
 
   const { runs, loading, deleteRun, refetch } = useRuns(userId ?? "");
   const router = useRouter();
+  
   const mutedColor = useThemeColor({}, "muted");
   const tintColor = useThemeColor({}, "tint");
   const backgroundColor = useThemeColor({}, "background");
