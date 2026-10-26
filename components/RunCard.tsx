@@ -88,11 +88,6 @@ export function RunCard({ run, onDelete }: RunCardProps) {
         </TouchableOpacity>
       </ThemedView>
 
-      <Image
-        source={{ uri: run.photo_url ?? DEFAULT_RUN_PHOTO }}
-        style={styles.photo}
-      />
-
       <ThemedView style={styles.statsRow}>
         <StatItem
           value={`${formatPace(run.duration_seconds, run.distance_km)}`}
@@ -107,6 +102,11 @@ export function RunCard({ run, onDelete }: RunCardProps) {
           label={"Duration"}
         />
       </ThemedView>
+      <Image
+        source={{ uri: run.photo_url ?? DEFAULT_RUN_PHOTO }}
+        style={styles.photo}
+      />
+
     </ThemedView>
   );
 }

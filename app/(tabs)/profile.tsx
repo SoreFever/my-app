@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { supabase } from "@/lib/supabase";
-import { Image, TouchableOpacity, ActivityIndicator } from "react-native";
+import { Image, TouchableOpacity, ActivityIndicator, Alert } from "react-native";
 import { useFocusEffect, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { appStyles } from "@/constants/styles";
@@ -9,6 +9,9 @@ import { useThemeColor } from "@/hooks/use-theme-color";
 import { ThemedView } from "@/components/themed-view";
 import { ThemedText } from "@/components/themed-text";
 import { consumeRunsDirty } from "@/lib/runsSignal";
+import Avatar from "@/components/Avatar";
+import * as ImagePicker from "expo-image-picker";
+
 
 export default function Profile() {
   const router = useRouter();
@@ -73,6 +76,61 @@ export default function Profile() {
     };
   }, [runs]);
 
+
+  async function uploadAvatar() {
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ["images"],
+        allowsMultipleSelection: false,
+        allowsEditing: true,
+        quality: 1,
+        exif: false,
+      })
+
+      if (result.canceled || !result.assets || result.assets.length === 0) {
+        console.log("User cancelled image picker");
+        return;
+      }
+
+      const image = result.assets[0];
+      console.log("Got image", image);
+
+      if (!image.uri) {
+        throw new Error("No image uri");
+      }
+
+      const arraybuffer = await fetch(image.uri).then((res) => res.arrayBuffer());
+
+      const fileExtension = image.uri?.split(".").pop()?.toLowerCase() ?? "jpeg";
+      const path = `${Date.now()}.${fileExtension}`;
+      const { data, error: uploadError } = await supabase.storage.from("avatars").upload(path, arraybuffer, {
+        contentType: image.mimeType ?? "image/jpeg",
+      })
+
+      if (uploadError) {
+        throw uploadError
+      }
+
+      const {data: urlData } = supabase.storage.from("avatars").getPublicUrl(data.path);
+      setAvatarUrl(urlData.publicUrl);
+      const { error } = await supabase
+        .from("profiles")
+        .update({avatar_url: urlData.publicUrl})
+        .eq("id", userId);
+
+      if (error) {
+        console.log(error.message);
+      }
+      
+    } catch (error: any) {
+      if (error) {
+        Alert.alert(error.message);
+      } else {
+        throw error;
+      }
+    } 
+  }
+
   return (
     <ThemedView style={styles.container}>
       <ThemedView style={{ flexDirection: "row", justifyContent: "flex-end" }}>
@@ -83,19 +141,24 @@ export default function Profile() {
 
       <ThemedView style={{ alignItems: "center", marginTop: 8 }}>
         {avatarUrl ? (
-          <Image
-            source={{ uri: avatarUrl }}
-            style={{ width: 100, height: 100, borderRadius: 50 }}
-          />
+          <TouchableOpacity onPress={uploadAvatar}>
+            <Image
+              source={{ uri: avatarUrl }}
+              style={{ width: 100, height: 100, borderRadius: 50 }}
+            />
+          </TouchableOpacity>
         ) : (
-          <ThemedView
-            style={{
-              width: 100,
-              height: 100,
-              borderRadius: 50,
-              backgroundColor: borderColor,
-            }}
-          />
+          <TouchableOpacity onPress={uploadAvatar}>
+            <ThemedView
+              style={{
+                width: 100,
+                height: 100,
+                borderRadius: 50,
+                backgroundColor: borderColor,
+              }}
+            />
+          </TouchableOpacity>
+          
         )}
         <ThemedText style={{ fontSize: 20, fontWeight: "600", marginTop: 12 }}>
           {username || "Runner"}
