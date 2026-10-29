@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { TextInput, TouchableOpacity, Alert } from "react-native";
 import { supabase } from "@/lib/supabase";
 import { appStyles } from "@/constants/styles";
@@ -7,6 +7,7 @@ import { ThemedText } from "@/components/themed-text";
 import { useThemeColor } from "@/hooks/use-theme-color";
 
 export default function ChangeUsername() {
+  const [userId, setUserId] = useState<string | null>(null);
   const [newUsername, setNewUsername] = useState("");
   const [loading, setLoading] = useState(false);
   const styles = appStyles;
@@ -17,25 +18,28 @@ export default function ChangeUsername() {
   const tintColor = useThemeColor({}, "tint");
   const backgroundColor = useThemeColor({}, "background");
 
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUserId(session?.user?.id ?? null);
+    });
+  }, []);
+
   async function updateUsername() {
     if (!newUsername) {
       Alert.alert("Enter a new username address.");
       return;
     }
     setLoading(true);
-    const { error } = await supabase.auth.updateUser({
-      data: { username: newUsername },
-    });
+    const { error } = await supabase
+      .from("profiles")
+      .update({ username: newUsername })
+      .eq("id", userId);
     setLoading(false);
 
     if (error) {
       Alert.alert(error.message);
       return;
     }
-    Alert.alert(
-      "Confirm your change",
-      "Check both your old and new username inboxes for confirmation links.",
-    );
   }
 
   return (

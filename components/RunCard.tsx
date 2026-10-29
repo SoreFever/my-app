@@ -4,7 +4,7 @@ import { ThemedView } from "./themed-view";
 import { ThemedText } from "./themed-text";
 import { useThemeColor } from "@/hooks/use-theme-color";
 import { Alert, TouchableOpacity } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
+import { AntDesign, Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { markRunsDirty } from "@/lib/runsSignal";
 
@@ -70,6 +70,10 @@ export function RunCard({ run, onDelete }: RunCardProps) {
     ]);
   }
 
+  function likeSession() {
+    console.log("liked");
+  }
+
   return (
     <ThemedView style={[styles.card, { backgroundColor: cardBg }]}>
       <ThemedView style={[styles.header, { justifyContent: "space-between" }]}>
@@ -106,7 +110,9 @@ export function RunCard({ run, onDelete }: RunCardProps) {
         source={{ uri: run.photo_url ?? DEFAULT_RUN_PHOTO }}
         style={styles.photo}
       />
-
+      <TouchableOpacity onPress={likeSession}>
+        <AntDesign name="like" size={24} color={"gray"}></AntDesign>
+      </TouchableOpacity>
     </ThemedView>
   );
 }

@@ -1,8 +1,13 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { supabase } from "@/lib/supabase";
-import { Image, TouchableOpacity, ActivityIndicator, Alert } from "react-native";
+import {
+  Image,
+  TouchableOpacity,
+  ActivityIndicator,
+  Alert,
+} from "react-native";
 import { useFocusEffect, useRouter } from "expo-router";
-import { Ionicons } from "@expo/vector-icons";
+import { Ionicons, SimpleLineIcons } from "@expo/vector-icons";
 import { appStyles } from "@/constants/styles";
 import { useRuns } from "@/hooks/useRuns";
 import { useThemeColor } from "@/hooks/use-theme-color";
@@ -11,7 +16,6 @@ import { ThemedText } from "@/components/themed-text";
 import { consumeRunsDirty } from "@/lib/runsSignal";
 import Avatar from "@/components/Avatar";
 import * as ImagePicker from "expo-image-picker";
-
 
 export default function Profile() {
   const router = useRouter();
@@ -23,6 +27,8 @@ export default function Profile() {
   const [userId, setUserId] = useState<string | null>(null);
   const [username, setUsername] = useState("");
   const [avatarUrl, setAvatarUrl] = useState("");
+  const [followerCount, setFollowerCount] = useState(0);
+  const [followingCount, setFollowingCount] = useState(0);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -43,6 +49,28 @@ export default function Profile() {
           setAvatarUrl(data.avatar_url ?? "");
         }
       });
+  }, [userId]);
+
+  useEffect(() => {
+    if (!userId) return;
+
+    (async () => {
+      const [follower, following] = await Promise.all([
+        supabase
+          .from("follows")
+          .select("*", { count: "exact", head: true })
+          .eq("following_id", userId),
+        supabase
+          .from("follows")
+          .select("*", { count: "exact", head: true })
+          .eq("follower_id", userId),
+      ]);
+      if (follower.error) console.log(follower.error.message);
+      else setFollowerCount(follower.count ?? 0);
+
+      if (following.error) console.log(following.error.message);
+      else setFollowingCount(following.count ?? 0);
+    })();
   }, [userId]);
 
   const { runs, loading, deleteRun, refetch } = useRuns(userId ?? "");
@@ -76,7 +104,6 @@ export default function Profile() {
     };
   }, [runs]);
 
-
   async function uploadAvatar() {
     try {
       const result = await ImagePicker.launchImageLibraryAsync({
@@ -85,7 +112,7 @@ export default function Profile() {
         allowsEditing: true,
         quality: 1,
         exif: false,
-      })
+      });
 
       if (result.canceled || !result.assets || result.assets.length === 0) {
         console.log("User cancelled image picker");
@@ -99,36 +126,42 @@ export default function Profile() {
         throw new Error("No image uri");
       }
 
-      const arraybuffer = await fetch(image.uri).then((res) => res.arrayBuffer());
+      const arraybuffer = await fetch(image.uri).then((res) =>
+        res.arrayBuffer(),
+      );
 
-      const fileExtension = image.uri?.split(".").pop()?.toLowerCase() ?? "jpeg";
+      const fileExtension =
+        image.uri?.split(".").pop()?.toLowerCase() ?? "jpeg";
       const path = `${Date.now()}.${fileExtension}`;
-      const { data, error: uploadError } = await supabase.storage.from("avatars").upload(path, arraybuffer, {
-        contentType: image.mimeType ?? "image/jpeg",
-      })
+      const { data, error: uploadError } = await supabase.storage
+        .from("avatars")
+        .upload(path, arraybuffer, {
+          contentType: image.mimeType ?? "image/jpeg",
+        });
 
       if (uploadError) {
-        throw uploadError
+        throw uploadError;
       }
 
-      const {data: urlData } = supabase.storage.from("avatars").getPublicUrl(data.path);
+      const { data: urlData } = supabase.storage
+        .from("avatars")
+        .getPublicUrl(data.path);
       setAvatarUrl(urlData.publicUrl);
       const { error } = await supabase
         .from("profiles")
-        .update({avatar_url: urlData.publicUrl})
+        .update({ avatar_url: urlData.publicUrl })
         .eq("id", userId);
 
       if (error) {
         console.log(error.message);
       }
-      
     } catch (error: any) {
       if (error) {
         Alert.alert(error.message);
       } else {
         throw error;
       }
-    } 
+    }
   }
 
   return (
@@ -158,7 +191,6 @@ export default function Profile() {
               }}
             />
           </TouchableOpacity>
-          
         )}
         <ThemedText style={{ fontSize: 20, fontWeight: "600", marginTop: 12 }}>
           {username || "Runner"}
@@ -176,45 +208,86 @@ export default function Profile() {
           </ThemedText>
         </ThemedView>
       ) : (
-        <ThemedView
-          style={{
-            flexDirection: "row",
-            justifyContent: "space-around",
-            marginTop: 24,
-            paddingVertical: 20,
-          }}
-        >
-          <ThemedView style={{ alignItems: "center" }}>
-            <ThemedText style={{ fontSize: 18, fontWeight: "600" }}>
-              {stats.totalRuns}
-            </ThemedText>
-            <ThemedText style={{ fontSize: 12, color: mutedColor }}>
-              Runs
-            </ThemedText>
+        <ThemedView style={styles.container}>
+          <ThemedView
+            style={{
+              flexDirection: "row",
+              justifyContent: "space-around",
+              marginTop: 24,
+              paddingVertical: 20,
+            }}
+          >
+            <TouchableOpacity onPress={() => router.push("/follow/follower")}>
+              <ThemedView style={{ alignItems: "center" }}>
+                <ThemedText style={{ fontSize: 18, fontWeight: "600" }}>
+                  {followerCount}
+                </ThemedText>
+                <ThemedText style={{ fontSize: 12, color: mutedColor }}>
+                  Followers
+                </ThemedText>
+              </ThemedView>
+            </TouchableOpacity>
+
+            <TouchableOpacity onPress={() => router.push("/follow/following")}>
+              <ThemedView style={{ alignItems: "center" }}>
+                <ThemedText style={{ fontSize: 18, fontWeight: "600" }}>
+                  {followingCount}
+                </ThemedText>
+                <ThemedText style={{ fontSize: 12, color: mutedColor }}>
+                  Following
+                </ThemedText>
+              </ThemedView>
+            </TouchableOpacity>
+            <ThemedView style={{ alignItems: "center" }}>
+              <ThemedText style={{ fontSize: 18, fontWeight: "600" }}>
+                {stats.totalRuns}
+              </ThemedText>
+              <ThemedText style={{ fontSize: 12, color: mutedColor }}>
+                Posts
+              </ThemedText>
+            </ThemedView>
           </ThemedView>
-          <ThemedView style={{ alignItems: "center" }}>
-            <ThemedText style={{ fontSize: 18, fontWeight: "600" }}>
-              {stats.totalDistance} km
-            </ThemedText>
-            <ThemedText style={{ fontSize: 12, color: mutedColor }}>
-              Distance
-            </ThemedText>
-          </ThemedView>
-          <ThemedView style={{ alignItems: "center" }}>
-            <ThemedText style={{ fontSize: 18, fontWeight: "600" }}>
-              {stats.totalHours} h
-            </ThemedText>
-            <ThemedText style={{ fontSize: 12, color: mutedColor }}>
-              Time
-            </ThemedText>
-          </ThemedView>
-          <ThemedView style={{ alignItems: "center" }}>
-            <ThemedText style={{ fontSize: 18, fontWeight: "600" }}>
-              {stats.avgPace}
-            </ThemedText>
-            <ThemedText style={{ fontSize: 12, color: mutedColor }}>
-              Avg Pace
-            </ThemedText>
+
+          <ThemedView
+            style={{
+              flexDirection: "row",
+              justifyContent: "space-around",
+              marginTop: 24,
+              paddingVertical: 20,
+            }}
+          >
+            <ThemedView style={{ alignItems: "center" }}>
+              <ThemedText style={{ fontSize: 18, fontWeight: "600" }}>
+                {stats.totalRuns}
+              </ThemedText>
+              <ThemedText style={{ fontSize: 12, color: mutedColor }}>
+                Runs
+              </ThemedText>
+            </ThemedView>
+            <ThemedView style={{ alignItems: "center" }}>
+              <ThemedText style={{ fontSize: 18, fontWeight: "600" }}>
+                {stats.totalDistance} km
+              </ThemedText>
+              <ThemedText style={{ fontSize: 12, color: mutedColor }}>
+                Distance
+              </ThemedText>
+            </ThemedView>
+            <ThemedView style={{ alignItems: "center" }}>
+              <ThemedText style={{ fontSize: 18, fontWeight: "600" }}>
+                {stats.totalHours} h
+              </ThemedText>
+              <ThemedText style={{ fontSize: 12, color: mutedColor }}>
+                Time
+              </ThemedText>
+            </ThemedView>
+            <ThemedView style={{ alignItems: "center" }}>
+              <ThemedText style={{ fontSize: 18, fontWeight: "600" }}>
+                {stats.avgPace}
+              </ThemedText>
+              <ThemedText style={{ fontSize: 12, color: mutedColor }}>
+                Avg Pace
+              </ThemedText>
+            </ThemedView>
           </ThemedView>
         </ThemedView>
       )}
