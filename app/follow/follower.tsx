@@ -17,7 +17,6 @@ type User = {
 };
 
 export default function Follower() {
-  const [query, setQuery] = useState("");
   const [users, setUsers] = useState<User[]>([]);
   const [userId, setUserId] = useState<string | null>(null);
   const router = useRouter();
@@ -44,10 +43,6 @@ export default function Follower() {
     })();
   }, [userId]);
 
-  const filtered = users.filter((u) =>
-    u.username.toLowerCase().includes(query.toLowerCase()),
-  );
-
   return (
     <ThemedView style={styles.container}>
       <ThemedView style={{ flexDirection: "row", justifyContent: "flex-end" }}>
@@ -56,7 +51,7 @@ export default function Follower() {
         </TouchableOpacity>
       </ThemedView>
       <FlatList
-        data={filtered}
+        data={users}
         keyExtractor={(item) => item.id}
         ListEmptyComponent={
           <ThemedText style={styles.empty}>No users found</ThemedText>

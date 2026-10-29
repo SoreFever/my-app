@@ -13,7 +13,6 @@ type User = {
 };
 
 export default function Following() {
-  const [query, setQuery] = useState("");
   const [users, setUsers] = useState<User[]>([]);
   const [userId, setUserId] = useState<string | null>(null);
   const router = useRouter();
@@ -27,6 +26,7 @@ export default function Following() {
 
   useEffect(() => {
     if (!userId) return;
+    console.log(userId);
 
     (async () => {
       const { data, error } = await supabase
@@ -40,9 +40,6 @@ export default function Following() {
     })();
   }, [userId]);
 
-  const filtered = users.filter((u) =>
-    u.username.toLowerCase().includes(query.toLowerCase()),
-  );
 
   return (
     <ThemedView style={styles.container}>
@@ -53,7 +50,7 @@ export default function Following() {
       </ThemedView>
 
       <FlatList
-        data={filtered}
+        data={users}
         keyExtractor={(item) => item.id}
         ListEmptyComponent={
           <ThemedText style={styles.empty}>No users found</ThemedText>
