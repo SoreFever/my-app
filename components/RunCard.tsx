@@ -7,10 +7,13 @@ import { Alert, TouchableOpacity } from "react-native";
 import { AntDesign, Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { markRunsDirty } from "@/lib/runsSignal";
+import { useEffect, useState } from "react";
+import { supabase } from "@/lib/supabase";
 
 interface RunCardProps {
   run: Run;
   onDelete: (runId: string) => void;
+  onLike: (runId: string) => void;
 }
 
 function formatDuration(seconds: number) {
@@ -40,13 +43,35 @@ function StatItem({ value, label }: { value: string; label: string }) {
   );
 }
 
-export function RunCard({ run, onDelete }: RunCardProps) {
+export function RunCard({ run, onDelete, onLike }: RunCardProps) {
   const cardBg = useThemeColor({}, "card");
   const mutedColor = useThemeColor({}, "muted");
   const DEFAULT_RUN_PHOTO =
     "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=600&h=300&fit=crop";
 
   const router = useRouter();
+  const [likesCount, setLikesCount] = useState(0);
+
+  useEffect(() => {
+    if (!run.id) return;
+    let cancelled = false;
+
+    (async () => {
+      const { count, error } = await supabase
+        .from("likes")
+        .select("*", { count: "exact", head: true })
+        .eq("run_id", run.id);
+
+      if (cancelled) return;
+
+      if (error) console.log(error.message);
+      else setLikesCount(count ?? 0);
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [run.id]);
 
   function confirmDelete() {
     Alert.alert("Delete run", "This can't be undone.", [
@@ -68,10 +93,6 @@ export function RunCard({ run, onDelete }: RunCardProps) {
       { text: "Delete", style: "destructive", onPress: confirmDelete },
       { text: "Cancel", style: "cancel" },
     ]);
-  }
-
-  function likeSession() {
-    console.log("liked");
   }
 
   return (
@@ -110,8 +131,10 @@ export function RunCard({ run, onDelete }: RunCardProps) {
         source={{ uri: run.photo_url ?? DEFAULT_RUN_PHOTO }}
         style={styles.photo}
       />
-      <TouchableOpacity onPress={likeSession}>
-        <AntDesign name="like" size={24} color={"gray"}></AntDesign>
+      <TouchableOpacity onPress={() => onLike(run.id)}>
+        <AntDesign name="like" size={24} color={"gray"}>
+          <ThemedText>{likesCount}</ThemedText>
+        </AntDesign>
       </TouchableOpacity>
     </ThemedView>
   );

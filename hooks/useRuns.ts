@@ -11,14 +11,31 @@ export function useRuns(userId: string) {
       return;
     }
     setLoading(true);
+
+    const { data: follows, error: followsError } = await supabase
+      .from("follows")
+      .select("following_id")
+      .eq("follower_id", userId);
+    if (followsError) console.log(followsError);
+
+    const ids = [userId, ...(follows ?? []).map((f) => f.following_id)];
+
     const { data, error } = await supabase
       .from("runs")
-      .select("*, profiles:user_id(username, avatar_url)")
-      .eq("user_id", userId)
+      .select(
+        `
+      *,
+      profiles:user_id(username, avatar_url),
+      likes(count)
+    `,
+      )
+      .in("user_id", ids)
       .order("created_at", { ascending: false });
+    if (error) console.log(error);
 
-    if (error) console.log("runs error:", error);
-    setRuns(data ?? []);
+    setRuns(
+      (data ?? []).map((r) => ({ ...r, likeCount: r.likes?.[0]?.count ?? 0 })),
+    );
     setLoading(false);
   }, [userId]);
 

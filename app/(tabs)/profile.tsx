@@ -7,14 +7,13 @@ import {
   Alert,
 } from "react-native";
 import { useFocusEffect, useRouter } from "expo-router";
-import { Ionicons, SimpleLineIcons } from "@expo/vector-icons";
+import { Ionicons } from "@expo/vector-icons";
 import { appStyles } from "@/constants/styles";
 import { useRuns } from "@/hooks/useRuns";
 import { useThemeColor } from "@/hooks/use-theme-color";
 import { ThemedView } from "@/components/themed-view";
 import { ThemedText } from "@/components/themed-text";
 import { consumeRunsDirty } from "@/lib/runsSignal";
-import Avatar from "@/components/Avatar";
 import * as ImagePicker from "expo-image-picker";
 
 export default function Profile() {

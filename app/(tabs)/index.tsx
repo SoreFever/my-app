@@ -13,6 +13,7 @@ import { useThemeColor } from "@/hooks/use-theme-color";
 
 export default function Home() {
   const [userId, setUserId] = useState<string | null>(null);
+  const [likesIds, setLikesIds] = useState<string[]>([]);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -20,12 +21,48 @@ export default function Home() {
     });
   }, []);
 
+  useEffect(() => {
+    if (!userId) return;
+    (async () => {
+      const { data, error } = await supabase
+        .from("likes")
+        .select("run_id")
+        .eq("user_id", userId);
+
+      if (error) console.log(error);
+
+      setLikesIds((data ?? []).map((l) => l.run_id));
+    })();
+  }, [userId]);
+
   const { runs, loading, deleteRun, refetch } = useRuns(userId ?? "");
   const router = useRouter();
-  
+
   const mutedColor = useThemeColor({}, "muted");
   const tintColor = useThemeColor({}, "tint");
   const backgroundColor = useThemeColor({}, "background");
+
+  async function toggleLike(runId: string) {
+    const isLiked = likesIds.includes(runId);
+
+    setLikesIds((prev) =>
+      isLiked ? prev.filter((id) => id !== runId) : [...prev, runId],
+    );
+    const { error } = isLiked
+      ? await supabase
+          .from("likes")
+          .delete()
+          .eq("user_id", userId)
+          .eq("run_id", runId)
+      : await supabase.from("likes").insert({ user_id: userId, run_id: runId });
+
+    if (error) {
+      console.log(error);
+      setLikesIds((prev) =>
+        isLiked ? [...prev, runId] : prev.filter((id) => id !== runId),
+      );
+    }
+  }
 
   useFocusEffect(
     useCallback(() => {
@@ -90,7 +127,9 @@ export default function Home() {
   return (
     <FlashList
       data={runs}
-      renderItem={({ item }) => <RunCard run={item} onDelete={deleteRun} />}
+      renderItem={({ item }) => (
+        <RunCard run={item} onDelete={deleteRun} onLike={toggleLike} />
+      )}
       contentContainerStyle={{ padding: 12 }}
     />
   );
