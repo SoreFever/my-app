@@ -4,6 +4,7 @@ import { supabase } from "@/lib/supabase";
 import { ThemedView } from "@/components/themed-view";
 import { ActivityIndicator, useColorScheme } from "react-native";
 import { Colors } from "@/constants/theme";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 export default function RootLayout() {
   const [userId, setUserId] = useState<string | null>(null);
@@ -12,6 +13,7 @@ export default function RootLayout() {
   const segments = useSegments();
   const colorScheme = useColorScheme() === "dark" ? "dark" : "light";
   const colors = Colors[colorScheme];
+  const queryClient = new QueryClient();
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
@@ -50,31 +52,33 @@ export default function RootLayout() {
   }
 
   return (
-    <Stack
-      screenOptions={{
-        headerStyle: { backgroundColor: colors.background },
-        headerTintColor: colors.text,
-        headerTitleStyle: { color: colors.text },
-        contentStyle: { backgroundColor: colors.background },
-      }}
-    >
-      <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-      <Stack.Screen name="auth" options={{ headerShown: false }} />
-      <Stack.Screen name="settings" options={{ title: "Settings" }} />
-      <Stack.Screen name="edit-run/[id]" options={{ title: "Edit Run" }} />
-      <Stack.Screen
-        name="reset-password"
-        options={{ title: "Reset Password" }}
-      />
-      <Stack.Screen
-        name="change-username"
-        options={{ title: "Change Username" }}
-      />
-      <Stack.Screen name="change-email" options={{ title: "Change Email" }} />
-      <Stack.Screen
-        name="change-password"
-        options={{ title: "Change Password" }}
-      />
-    </Stack>
+    <QueryClientProvider client={queryClient}>
+      <Stack
+        screenOptions={{
+          headerStyle: { backgroundColor: colors.background },
+          headerTintColor: colors.text,
+          headerTitleStyle: { color: colors.text },
+          contentStyle: { backgroundColor: colors.background },
+        }}
+      >
+        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+        <Stack.Screen name="auth" options={{ headerShown: false }} />
+        <Stack.Screen name="settings" options={{ title: "Settings" }} />
+        <Stack.Screen name="edit-run/[id]" options={{ title: "Edit Run" }} />
+        <Stack.Screen
+          name="reset-password"
+          options={{ title: "Reset Password" }}
+        />
+        <Stack.Screen
+          name="change-username"
+          options={{ title: "Change Username" }}
+        />
+        <Stack.Screen name="change-email" options={{ title: "Change Email" }} />
+        <Stack.Screen
+          name="change-password"
+          options={{ title: "Change Password" }}
+        />
+      </Stack>
+    </QueryClientProvider>
   );
 }

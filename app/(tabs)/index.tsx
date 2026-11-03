@@ -1,7 +1,7 @@
 import { FlashList } from "@shopify/flash-list";
 import { RunCard } from "@/components/RunCard";
 import { useRuns } from "@/hooks/useRuns";
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { supabase } from "@/lib/supabase";
 import { TouchableOpacity, ActivityIndicator } from "react-native";
 import { useFocusEffect, useRouter } from "expo-router";
@@ -10,30 +10,15 @@ import { Ionicons } from "@expo/vector-icons";
 import { ThemedView } from "@/components/themed-view";
 import { ThemedText } from "@/components/themed-text";
 import { useThemeColor } from "@/hooks/use-theme-color";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 export default function Home() {
   const [userId, setUserId] = useState<string | null>(null);
-  const [likesIds, setLikesIds] = useState<string[]>([]);
-
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUserId(session?.user?.id ?? null);
     });
   }, []);
-
-  useEffect(() => {
-    if (!userId) return;
-    (async () => {
-      const { data, error } = await supabase
-        .from("likes")
-        .select("run_id")
-        .eq("user_id", userId);
-
-      if (error) console.log(error);
-
-      setLikesIds((data ?? []).map((l) => l.run_id));
-    })();
-  }, [userId]);
 
   const { runs, loading, deleteRun, refetch } = useRuns(userId ?? "");
   const router = useRouter();
@@ -42,26 +27,70 @@ export default function Home() {
   const tintColor = useThemeColor({}, "tint");
   const backgroundColor = useThemeColor({}, "background");
 
-  async function toggleLike(runId: string) {
-    const isLiked = likesIds.includes(runId);
+  const qc = useQueryClient();
 
-    setLikesIds((prev) =>
-      isLiked ? prev.filter((id) => id !== runId) : [...prev, runId],
-    );
-    const { error } = isLiked
-      ? await supabase
-          .from("likes")
-          .delete()
-          .eq("user_id", userId)
-          .eq("run_id", runId)
-      : await supabase.from("likes").insert({ user_id: userId, run_id: runId });
+  const { data: likes = [] } = useQuery({
+    queryKey: ["likes", userId],
+    enabled: !!userId,
+    staleTime: 30_000,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("likes")
+        .select("run_id")
+        .eq("user_id", userId!);
+      if (error) throw error;
+      return data;
+    },
+  });
 
-    if (error) {
-      console.log(error);
-      setLikesIds((prev) =>
-        isLiked ? [...prev, runId] : prev.filter((id) => id !== runId),
+  const likeIds = useMemo(() => new Set(likes.map((l) => l.run_id)), [likes]);
+
+  const likeMutation = useMutation({
+    mutationFn: async ({ runId, liked }: { runId: string; liked: boolean }) => {
+      const { error } = liked
+        ? await supabase
+            .from("likes")
+            .delete()
+            .eq("user_id", userId)
+            .eq("run_id", runId)
+        : await supabase
+            .from("likes")
+            .insert({ user_id: userId, run_id: runId });
+      if (error) throw error;
+    },
+    onMutate: async ({ runId, liked }) => {
+      await qc.cancelQueries({ queryKey: ["likes", userId] });
+      await qc.cancelQueries({ queryKey: ["likeCount", runId] });
+
+      const prevLikes = qc.getQueryData(["likes", userId]);
+      const prevCount = qc.getQueryData(["likeCount", runId]);
+
+      qc.setQueryData(["likes", userId], (old: { run_id: string }[] = []) =>
+        liked
+          ? old.filter((l) => l.run_id !== runId)
+          : [...old, { run_id: runId }],
       );
-    }
+      qc.setQueryData(
+        ["likeCount", runId],
+        (old: number = 0) => old + (liked ? -1 : 1),
+      );
+      return { prevLikes, prevCount };
+    },
+
+    onError: (_e, { runId }, ctx) => {
+      qc.setQueryData(["likes", userId], ctx?.prevLikes);
+      qc.setQueryData(["likeCount", runId], ctx?.prevCount);
+    },
+
+    onSettled: (_d, _e, { runId }) => {
+      qc.invalidateQueries({ queryKey: ["likes", userId] });
+      qc.invalidateQueries({ queryKey: ["likeCount", runId] });
+    },
+  });
+
+  function toggleLike(runId: string) {
+    if (!userId) return;
+    likeMutation.mutate({ runId, liked: likeIds.has(runId) });
   }
 
   useFocusEffect(
@@ -128,7 +157,12 @@ export default function Home() {
     <FlashList
       data={runs}
       renderItem={({ item }) => (
-        <RunCard run={item} onDelete={deleteRun} onLike={toggleLike} />
+        <RunCard
+          run={item}
+          onDelete={deleteRun}
+          liked={likeIds.has(item.id)}
+          onLike={toggleLike}
+        />
       )}
       contentContainerStyle={{ padding: 12 }}
     />
