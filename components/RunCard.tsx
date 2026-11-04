@@ -14,6 +14,7 @@ interface RunCardProps {
   onDelete: (runId: string) => void;
   onLike: (runId: string) => void;
   liked: boolean;
+  isOwner: boolean;
 }
 
 function formatDuration(seconds: number) {
@@ -43,7 +44,13 @@ function StatItem({ value, label }: { value: string; label: string }) {
   );
 }
 
-export function RunCard({ run, onDelete, onLike, liked }: RunCardProps) {
+export function RunCard({
+  run,
+  onDelete,
+  onLike,
+  liked,
+  isOwner,
+}: RunCardProps) {
   const cardBg = useThemeColor({}, "card");
   const mutedColor = useThemeColor({}, "muted");
   const DEFAULT_RUN_PHOTO =
@@ -96,9 +103,11 @@ export function RunCard({ run, onDelete, onLike, liked }: RunCardProps) {
           <ThemedText style={styles.title}>{run.title}</ThemedText>
         </ThemedView>
 
-        <TouchableOpacity onPress={showOptions} style={{ padding: 12 }}>
-          <Ionicons name="ellipsis-horizontal" size={20} color={mutedColor} />
-        </TouchableOpacity>
+        {isOwner && (
+          <TouchableOpacity onPress={showOptions} style={{ padding: 12 }}>
+            <Ionicons name="ellipsis-horizontal" size={20} color={mutedColor} />
+          </TouchableOpacity>
+        )}
       </ThemedView>
 
       <ThemedView style={styles.statsRow}>

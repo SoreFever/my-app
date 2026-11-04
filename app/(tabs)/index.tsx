@@ -1,10 +1,10 @@
 import { FlashList } from "@shopify/flash-list";
 import { RunCard } from "@/components/RunCard";
 import { useRuns } from "@/hooks/useRuns";
-import { useEffect, useState, useCallback, useMemo } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { supabase } from "@/lib/supabase";
 import { TouchableOpacity, ActivityIndicator } from "react-native";
-import { useFocusEffect, useRouter } from "expo-router";
+import {  useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { ThemedView } from "@/components/themed-view";
 import { ThemedText } from "@/components/themed-text";
@@ -19,7 +19,7 @@ export default function Home() {
     });
   }, []);
 
-  const { runs, loading, deleteRun, refetch } = useRuns(userId ?? "");
+  const { runs, loading, deleteRun } = useRuns(userId ?? "");
   const router = useRouter();
 
   const mutedColor = useThemeColor({}, "muted");
@@ -153,6 +153,7 @@ export default function Home() {
           onDelete={deleteRun}
           liked={likeIds.has(item.id)}
           onLike={toggleLike}
+          isOwner={item.user_id === userId}
         />
       )}
       contentContainerStyle={{ padding: 12 }}
