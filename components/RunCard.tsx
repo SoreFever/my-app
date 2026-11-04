@@ -6,7 +6,6 @@ import { useThemeColor } from "@/hooks/use-theme-color";
 import { Alert, TouchableOpacity } from "react-native";
 import { AntDesign, Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import { markRunsDirty } from "@/lib/runsSignal";
 import { supabase } from "@/lib/supabase";
 import { useQuery } from "@tanstack/react-query";
 
@@ -52,18 +51,18 @@ export function RunCard({ run, onDelete, onLike, liked }: RunCardProps) {
 
   const router = useRouter();
 
-  const { data: likesCount = 0} = useQuery({
-    queryKey: ['likeCount', run.id],
+  const { data: likesCount = 0 } = useQuery({
+    queryKey: ["likeCount", run.id],
     staleTime: 30_000,
     queryFn: async () => {
       const { count, error } = await supabase
-      .from("likes")
-      .select("*", { count: "exact", head: true })
-      .eq("run_id", run.id);
+        .from("likes")
+        .select("*", { count: "exact", head: true })
+        .eq("run_id", run.id);
       if (error) throw error;
       return count ?? 0;
-    }
-  })
+    },
+  });
 
   function confirmDelete() {
     Alert.alert("Delete run", "This can't be undone.", [
@@ -71,10 +70,7 @@ export function RunCard({ run, onDelete, onLike, liked }: RunCardProps) {
       {
         text: "Delete",
         style: "destructive",
-        onPress: () => {
-          onDelete(run.id);
-          markRunsDirty();
-        },
+        onPress: () => onDelete(run.id),
       },
     ]);
   }

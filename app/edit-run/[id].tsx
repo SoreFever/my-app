@@ -13,7 +13,6 @@ import { supabase } from "@/lib/supabase";
 import { ThemedView } from "@/components/themed-view";
 import { ThemedText } from "@/components/themed-text";
 import { useThemeColor } from "@/hooks/use-theme-color";
-import { markRunsDirty } from "@/lib/runsSignal";
 
 export default function EditRun() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -90,7 +89,6 @@ export default function EditRun() {
       return;
     }
 
-    markRunsDirty();
     router.back();
   }
 

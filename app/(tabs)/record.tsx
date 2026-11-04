@@ -6,7 +6,6 @@ import { ThemedView } from "@/components/themed-view";
 import { ThemedText } from "@/components/themed-text";
 import { useThemeColor } from "@/hooks/use-theme-color";
 import { supabase } from "@/lib/supabase";
-import { markRunsDirty } from "@/lib/runsSignal";
 import MapView, { Polyline, Marker } from "react-native-maps";
 import { AppState, AppStateStatus } from "react-native";
 
@@ -299,7 +298,6 @@ export default function Record() {
       return;
     }
 
-    markRunsDirty();
     resetAll();
     router.push(`/edit-run/${data.id}`);
   }

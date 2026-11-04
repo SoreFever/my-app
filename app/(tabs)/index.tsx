@@ -5,7 +5,6 @@ import { useEffect, useState, useCallback, useMemo } from "react";
 import { supabase } from "@/lib/supabase";
 import { TouchableOpacity, ActivityIndicator } from "react-native";
 import { useFocusEffect, useRouter } from "expo-router";
-import { consumeRunsDirty } from "@/lib/runsSignal";
 import { Ionicons } from "@expo/vector-icons";
 import { ThemedView } from "@/components/themed-view";
 import { ThemedText } from "@/components/themed-text";
@@ -92,14 +91,6 @@ export default function Home() {
     if (!userId) return;
     likeMutation.mutate({ runId, liked: likeIds.has(runId) });
   }
-
-  useFocusEffect(
-    useCallback(() => {
-      if (consumeRunsDirty()) {
-        refetch();
-      }
-    }, [refetch]),
-  );
 
   if (loading) {
     return (

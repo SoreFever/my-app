@@ -13,7 +13,6 @@ import { useRuns } from "@/hooks/useRuns";
 import { useThemeColor } from "@/hooks/use-theme-color";
 import { ThemedView } from "@/components/themed-view";
 import { ThemedText } from "@/components/themed-text";
-import { consumeRunsDirty } from "@/lib/runsSignal";
 import * as ImagePicker from "expo-image-picker";
 
 export default function Profile() {
@@ -72,14 +71,8 @@ export default function Profile() {
     })();
   }, [userId]);
 
-  const { runs, loading, deleteRun, refetch } = useRuns(userId ?? "");
-
-  useFocusEffect(
-    useCallback(() => {
-      if (consumeRunsDirty()) {
-        refetch();
-      }
-    }, [refetch]),
+  const { runs, loading, deleteRun, updateRun, refetch } = useRuns(
+    userId ?? "",
   );
 
   const stats = useMemo(() => {
