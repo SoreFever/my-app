@@ -13,6 +13,7 @@ import { supabase } from "@/lib/supabase";
 import { ThemedView } from "@/components/themed-view";
 import { ThemedText } from "@/components/themed-text";
 import { useThemeColor } from "@/hooks/use-theme-color";
+import { useQueryClient } from "@tanstack/react-query";
 
 export default function EditRun() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -27,6 +28,8 @@ export default function EditRun() {
   const backgroundColor = useThemeColor({}, "background");
   const borderColor = useThemeColor({}, "border");
   const textColor = useThemeColor({}, "text");
+
+  const qc = useQueryClient();
 
   useEffect(() => {
     if (!id) return;
@@ -89,6 +92,7 @@ export default function EditRun() {
       return;
     }
 
+    qc.invalidateQueries({queryKey: ["runs"]})
     router.back();
   }
 

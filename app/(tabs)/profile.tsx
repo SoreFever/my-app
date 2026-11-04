@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/lib/supabase";
 import {
   Image,
@@ -6,7 +6,7 @@ import {
   ActivityIndicator,
   Alert,
 } from "react-native";
-import { useFocusEffect, useRouter } from "expo-router";
+import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { appStyles } from "@/constants/styles";
 import { useRuns } from "@/hooks/useRuns";
@@ -14,19 +14,21 @@ import { useThemeColor } from "@/hooks/use-theme-color";
 import { ThemedView } from "@/components/themed-view";
 import { ThemedText } from "@/components/themed-text";
 import * as ImagePicker from "expo-image-picker";
+import { useQueryClient } from "@tanstack/react-query";
 
 export default function Profile() {
   const router = useRouter();
   const styles = appStyles;
   const mutedColor = useThemeColor({}, "muted");
   const borderColor = useThemeColor({}, "border");
-  const bgColor = useThemeColor({}, "background");
 
   const [userId, setUserId] = useState<string | null>(null);
   const [username, setUsername] = useState("");
   const [avatarUrl, setAvatarUrl] = useState("");
   const [followerCount, setFollowerCount] = useState(0);
   const [followingCount, setFollowingCount] = useState(0);
+
+  const qc = useQueryClient();
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -71,14 +73,16 @@ export default function Profile() {
     })();
   }, [userId]);
 
-  const { runs, loading, deleteRun, updateRun, refetch } = useRuns(
+  const { runs, loading } = useRuns(
     userId ?? "",
   );
 
+  const myRuns = useMemo(() => runs.filter((r) => r.user_id === userId), [runs, userId])
+
   const stats = useMemo(() => {
-    const totalRuns = runs.length;
-    const totalDistance = runs.reduce((sum, r) => sum + r.distance_km, 0);
-    const totalSeconds = runs.reduce((sum, r) => sum + r.duration_seconds, 0);
+    const totalRuns = myRuns.length;
+    const totalDistance = myRuns.reduce((sum, r) => sum + r.distance_km, 0);
+    const totalSeconds = myRuns.reduce((sum, r) => sum + r.duration_seconds, 0);
     const avgPaceMinPerKm =
       totalDistance > 0 ? totalSeconds / 60 / totalDistance : 0;
 
@@ -146,6 +150,8 @@ export default function Profile() {
 
       if (error) {
         console.log(error.message);
+      } else {
+        qc.invalidateQueries({queryKey: ["runs"]})
       }
     } catch (error: any) {
       if (error) {

@@ -8,6 +8,7 @@ import { useThemeColor } from "@/hooks/use-theme-color";
 import { supabase } from "@/lib/supabase";
 import MapView, { Polyline, Marker } from "react-native-maps";
 import { AppState, AppStateStatus } from "react-native";
+import { useQueryClient } from "@tanstack/react-query";
 
 function haversineDistance(
   coord1: { latitude: number; longitude: number },
@@ -87,14 +88,16 @@ export default function Record() {
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const mapRef = useRef<MapView | null>(null);
   const runStateRef = useRef<RunState>("idle");
-  const segmentStartRef = useRef<number | null>(null);  // when current run segment started
-  const accumulatedMsRef = useRef(0);                   // total ms from earlier segments
+  const segmentStartRef = useRef<number | null>(null); // when current run segment started
+  const accumulatedMsRef = useRef(0); // total ms from earlier segments
 
   // Viewable stats
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [distanceKm, setDistanceKm] = useState(0);
   const [currentPaceMinPerKm, setCurrentPaceMinPerKm] = useState(0);
   const [elevationGainM, setElevationGainM] = useState(0);
+
+  const qc = useQueryClient();
 
   useEffect(() => {
     runStateRef.current = runState;
@@ -232,8 +235,9 @@ export default function Record() {
     segmentStartRef.current = Date.now();
     timerRef.current = setInterval(() => {
       if (segmentStartRef.current == null) return;
-      const totalMs = accumulatedMsRef.current + (Date.now() - segmentStartRef.current);
-      setElapsedSeconds(Math.floor(totalMs/1000));
+      const totalMs =
+        accumulatedMsRef.current + (Date.now() - segmentStartRef.current);
+      setElapsedSeconds(Math.floor(totalMs / 1000));
     }, 250);
   }
 
@@ -245,7 +249,7 @@ export default function Record() {
       accumulatedMsRef.current += Date.now() - segmentStartRef.current;
       segmentStartRef.current = null;
     }
-    setElapsedSeconds(Math.floor(accumulatedMsRef.current / 1000))
+    setElapsedSeconds(Math.floor(accumulatedMsRef.current / 1000));
   }
 
   function resetAll() {
@@ -298,6 +302,7 @@ export default function Record() {
       return;
     }
 
+    qc.invalidateQueries({queryKey: ["runs"]})
     resetAll();
     router.push(`/edit-run/${data.id}`);
   }

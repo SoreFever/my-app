@@ -5,6 +5,7 @@ import { supabase } from "@/lib/supabase";
 import { ThemedView } from "@/components/themed-view";
 import { ThemedText } from "@/components/themed-text";
 import { useThemeColor } from "@/hooks/use-theme-color";
+import { useQueryClient } from "@tanstack/react-query";
 
 function SettingsRow({
   icon,
@@ -54,6 +55,7 @@ function SettingsRow({
 
 export default function Settings() {
   const router = useRouter();
+  const qc = useQueryClient();
 
   function confirmSignOut() {
     Alert.alert("Sign out?", undefined, [
@@ -75,6 +77,7 @@ export default function Settings() {
         onPress: () => supabase.auth.signOut(),
       },
     ]);
+    qc.clear();
   }
 
   return (
